@@ -7,6 +7,9 @@ import selenium
 import time
 import random
 from selenium import webdriver
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
+
 from datetime import datetime
 from time import sleep
 
@@ -33,15 +36,24 @@ def upload_screenshot_and_get_response(screenshot_path):
 	# 	)
 	# 	print("Upload response: " + response)
 	# elementNumber = random.randint(1, 15)
-	elementNumber = int(input('Give the next elementNumber: '))
-	return { "description": "Click on the button", "action": { "actionType": "click", "elementNumber": elementNumber, "x": 50, "y": 60 }, "expectation": "The button will be clicked", "step": 1, "achieved": False, "expectationSatisfied": False, "goal": "Click on the button}" }
+	#elementNumber = int(input('Give the next elementNumber: '))
+	print ("Give the JSON from OpenAI: ")
+	lines = []
+	while True:
+		line = input()
+		if not line:
+			break
+		lines.append(line)
+	multiline_input = '\n'.join(lines)
+	return json.loads(multiline_input)
+	#return { "description": "Click on the button", "action": { "actionType": "scroll", "elementNumber": elementNumber, "x": 50, "y": 60 }, "expectation": "The button will be clicked", "step": 1, "achieved": False, "expectationSatisfied": False, "goal": "Click on the button}" }
 	# return json.loads(response.choices[0].text)  # This assumes a text-based output, but you'd extract the relevant data as per your API setup
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Starting URL")
 parser.add_argument("goal", help="Goal of the test")
-parser.add_argument("-b", "--browser", default="firefox", help="Browser to use (e.g., chrome)")
+parser.add_argument("-b", "--browser", default="firefox", help="Browser to use (firefox or chrome)")
 args = parser.parse_args()
 
 if args.browser == "chrome":
@@ -53,7 +65,7 @@ else:
 
 print(f"Loading {args.url}")
 browser.get(args.url)
-browser.implicitly_wait(10)  # wait for the page to load, improve!
+browser.implicitly_wait(10)  # wait at most 10 seconds for commands to return
 sleep (5)
 
 # We want to inject a script into the page that marks all clickable objects
@@ -75,16 +87,12 @@ except Exception as e:
 prompt = """
 You are going to test a website. You will be given a URL and a screenshot of the website with that URL.  
 You try to understand the screenshots content and layout. From that you determine what the next logical 
-action will be to reach the following goal: "%s". 
-
-Possible actions are currently (more to be added later):
-1. click
-2. scroll
+action will be to reach the given goal below.
 
 Every time you receive a screenshot of the website you determine your next action. 
-You return a JSON structure that contains that action in the followung form:
+You return a JSON structure that contains that action in the following form, all other fields are required:
 - "description": A brief description of the action you are going to perform.
-- "action": {
+- "action": # The action you are going to take.
    "actionType": "click", #Identify the primary user action that can be taken on the screenshot (e.g., "click", "scroll", etc.),
    "elementNumber": 1, # The number of the element that is to be acted upon. The number is determined by the number in the yellow box around the element in the screenshot. 
     "x": The horizontal percentage coordinate where the action is to be taken, most normaly the center of the element
@@ -98,16 +106,34 @@ You return a JSON structure that contains that action in the followung form:
 - "frustrationLevel": A number between 1 and 10 indicating how frustrated you are with the website. 1 is not frustrated at all, 10 is very frustrated. 
 - "frustrationLevelReason": A brief description of where your frustrationLevel is coming from.
 
-The action with actionType "click" should always contain actionType, elementNumber, x and y.
-The action with actionType "scroll" should always contain actionType, elementNumber, x, y and scrollX and scrollY, the latter both in percentage of page height and width.
+The are two actions possible: "click" and "scroll".
+
+The "action" structure with actionType "click" contains:
+1. actionType (required)
+2. elementNumber (required)
+3. x and y (required)
+
+The action with actionType "scroll" always contains:
+1. actionType (required)
+2. elementNumber (optional)
+3. x and y (optional)
+4. "direction" (required). can be "up", "down", "left", "right"
+5. "distance" (required). The distance to scroll can be "little", "medium" or "far"
+If either elementNumber or x,y are given, the scroll is tried on the element or coordinates. Otherwise the scroll is done on the whole page.
 
 If there is any cookiebar present, please click it away first.
+
+Please only output the JSON structure, nothing else.
+
+Goal:
+"%s" 
+
 """ % (args.goal) 
 
 prompt_messages = [ { "role": "system", "content": prompt } ]
 
 
-print(f"Using the following prompt to initialize OpenAI: {prompt_messages}")
+print(f"Using the following prompt to initialize OpenAI: {prompt}")
 
 #response = openai.ChatCompletion.create(
 #	messages=prompt_messages, 
@@ -135,38 +161,90 @@ while not achieved and step < MAX_STEPS:
 	achieved = response_json["achieved"]
 	action = response_json["action"]
 	
-	if action == None:
+	if action == None or "actionType" not in action:
 		raise ValueError("No action returned")
 	
 	# Execute action
-
-	# First convert percentage to pixel coordinates
 	size = browser.get_window_size()
-	elementIndex = action["elementNumber"] - 1
+
+	# Get a x position, from center of element if correct elementNumber is given, otherwise from x, y coordinates
+	x = -1
+	y = -1
+	elementIndex = -1
+	if "elementNumber" in action:
+		elementIndex = action["elementNumber"] - 1
 	if USE_ELEMENT_NUMBERS_FOR_CLICK and elementIndex >= 0 and elementIndex < len(clickableElements):
 		clickableElement = clickableElements[elementIndex]
-		print ("Action elementIndex: ", elementIndex, clickableElement)
 		x = clickableElement["x"] + clickableElement["width"] / 2
 		y = clickableElement["y"] + clickableElement["height"] / 2
+		print ("Action x, y, elementIndex: ", x, y, elementIndex, clickableElement)
 	else:
-		x = size["width"] * action["x"]	/ 100.0
-		y = size["height"] * action["y"] / 100.0
+		if 'x' in action:
+			x = size["width"] * action["x"]	/ 100.0
+		if 'y' in action:	
+			y = size["height"] * action["y"] / 100.0
+		print ("Action x, y: ", x, y)
+
 	if action["actionType"] == "click":
-		print ("Click: ", x, y)
 		# why is elementFromPointDeep function not defined anymore???
-		browser.execute_script("""
-						 function elementFromPointDeep(x, y) { 
-						 	let element = document.elementFromPoint(x, y); 
-						 	while (element && element.shadowRoot) { 
-						 	const inner = element.shadowRoot.elementFromPoint(x, y); 
-						 	if (!inner) break; element = inner; } return element; 
-						 } 
-						 elementFromPointDeep(%d, %d)?.click()""" % (x, y))
-		sleep(10)
+		# browser.execute_script("""
+		#				 function elementFromPointDeep(x, y) { 
+		#				 	let element = document.elementFromPoint(x, y); 
+		#				 	while (element && element.shadowRoot) { 
+		#				 	const inner = element.shadowRoot.elementFromPoint(x, y); 
+		#				 	if (!inner) break; element = inner; } return element; 
+		#				 } 
+		#				 elementFromPointDeep(%d, %d)?.click()""" % (x, y))
+		browserAction = ActionChains(browser)
+		browserAction.move_by_offset(max(0, min(x, size["width"])), max(0, min(y, size["height"]))).click().perform()
+		browserAction.reset_actions()
+
+	elif action["actionType"] == "scroll":
+		if "distance" in action:
+			if action["distance"] == "little":
+				distanceX = size["width"] / 4
+				distanceY = size["height"] / 4
+			elif action["distance"] == "medium":
+				distanceX = size["width"] / 2
+				distanceY = size["height"] / 2
+			elif action["distance"] == "far":
+				distanceX = size["width"]
+				distanceY = size["height"]
+			else:
+				raise ValueError("Distance value little, medium or far should be given in scroll action")
+		else:
+			raise ValueError("Distance should be given in scroll action")
+			
+		scrollX = 0
+		scrollY = 0
+		if "direction" in action:
+			if action["direction"] == "up":
+				scrollY = -int(distanceY)
+			elif action["direction"] == "down":
+				scrollY = int(distanceY)
+			elif action["direction"] == "left":
+				scrollX = -int(distanceX)
+			elif action["direction"] == "right":
+				scrollX = int(distanceX)
+			else:
+				raise ValueError("Direction value up, down, left or right should be given in scroll action")
+		else:
+			raise ValueError("Direction should be given in scroll action")
+		
+		print ("Scrolling x, y, scrollX, scrollY: ", x, y, scrollX, scrollY)
+		try:
+			scroll_origin = ScrollOrigin.from_viewport(int(max(0, min(x, size["width"]))), int(max(0, min(y, size["height"]))))
+			ActionChains(browser).scroll_from_origin(scroll_origin, scrollX, scrollY).perform()
+			ActionChains(browser).reset_actions()
+		except Exception as e:
+			print("Scrolling failed: ", e)
+
 	else:
 		raise ValueError("Action not recognized")
 		
+	# wait for action to complete
+	sleep(5)	
+
 	step += 1
 
 browser.quit()
-

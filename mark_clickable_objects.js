@@ -26,12 +26,19 @@ function getVisibleAndClickableElements () {
         attachElement.replaceChildren("");
     }
 
-    // console.log(attachElement, attachElementRect, window.scrollX, window.scrollY);
+    let screenRect = {
+        x: 0,
+        y: 0,
+        width: window.innerWidth,
+        height: window.innerHeight
+    }
+ 
+    // console.log(screenRect, clickableElements.length, window.scrollX, window.scrollY);
     clickableElements.forEach((element, index) => {
-        let rect = element.getBoundingClientRect();
+        let rect = clipRect (element.getBoundingClientRect(), screenRect);
         // Check if the element is visible and not behind something else
         if (isVisible (element)) {
-            // console.log(index, rect, element);
+            // console.log(index, rect, elementsCoordinates.length, element);
 
             elementsCoordinates.push({
                 element: element,
@@ -45,14 +52,14 @@ function getVisibleAndClickableElements () {
             const numberDiv = document.createElement('div');
             numberDiv.innerText = elementsCoordinates.length;
             numberDiv.style.position = 'absolute';
-            numberDiv.style.top = (rect.top + rect.height / 2) + 'px';
+            numberDiv.style.top = (rect.top + rect.height*0) + 'px';
             numberDiv.style.left = (rect.left + rect.width / 2) + 'px';
             numberDiv.style.width = 25;
             numberDiv.style.height = 25;
             numberDiv.style.display = 'flex';
             numberDiv.style.justifyContent = 'center';
             numberDiv.style.alignItems = 'center';
-            numberDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.7)';
+            numberDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.8)';
             numberDiv.style.borderRadius = '100%';
             numberDiv.style.fontSize = '12px';
             numberDiv.style.fontWeight = 'bold';
@@ -112,7 +119,7 @@ function elementFromPointDeep(x, y) {
     let element = document.elementFromPoint(x, y);
     while (element?.shadowRoot) {
         const inner = element.shadowRoot.elementFromPoint(x, y);
-        if (!inner) break;
+        if (!inner || inner === element) break;
         element = inner;
     }
     return element;
@@ -161,4 +168,24 @@ function doRectsOverlap(rect1, rect2) {
     rect1.bottom < rect2.top ||
     rect1.top > rect2.bottom
     );
+}
+
+function clipRect(rectToClip, clippingRect) {
+    // Ensure rectB's left side is within rectA
+    rectToClip.x = Math.max(rectToClip.x, clippingRect.x);
+
+    // Ensure rectB's top side is within rectA
+    rectToClip.y = Math.max(rectToClip.y, clippingRect.y);
+
+    // Ensure rectB's right side is within rectA
+    rectToClip.width = Math.min(rectToClip.x + rectToClip.width, clippingRect.x + clippingRect.width) - rectToClip.x;
+
+    // Ensure rectB's bottom side is within rectA
+    rectToClip.height = Math.min(rectToClip.y + rectToClip.height, clippingRect.y + clippingRect.height) - rectToClip.y;
+
+    // Ensure width and height are not negative after clipping
+    rectToClip.width = Math.max(rectToClip.width, 0);
+    rectToClip.height = Math.max(rectToClip.height, 0);
+
+    return rectToClip;
 }
