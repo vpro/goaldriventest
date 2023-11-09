@@ -8,7 +8,7 @@ function getVisibleAndClickableElements () {
     // get rid of cookie consent first
     const cookieConsent = document.getElementById("ccm_notification_host");
     if (cookieConsent && window.getComputedStyle(cookieConsent).visibility !== 'hidden' && cookieConsent.shadowRoot) {
-       // cookieConsent.shadowRoot.replaceChildren("");
+        cookieConsent.shadowRoot.replaceChildren("");
     }
 
     // Maak een lijst van objecten met de coördinaten en het element, clear any old ones first if present 
@@ -33,17 +33,16 @@ function getVisibleAndClickableElements () {
         height: window.innerHeight
     }
  
-    // console.log(screenRect, clickableElements.length, window.scrollX, window.scrollY);
     clickableElements.forEach((element, index) => {
-        let rect = clipRect (element.getBoundingClientRect(), screenRect);
+        let rect = clipRect (getVisibleRect (element), screenRect);
         // Check if the element is visible and not behind something else
-        if (isVisible (element)) {
+        if (rect.width > 0 && rect.height > 0) {
             // console.log(index, rect, elementsCoordinates.length, element);
 
             elementsCoordinates.push({
                 element: element,
-                x: rect.left,
-                y: rect.top,
+                x: rect.x,
+                y: rect.y,
                 width: rect.width,
                 height: rect.height
             });
@@ -52,8 +51,8 @@ function getVisibleAndClickableElements () {
             const numberDiv = document.createElement('div');
             numberDiv.innerText = elementsCoordinates.length;
             numberDiv.style.position = 'absolute';
-            numberDiv.style.top = (rect.top + rect.height*0) + 'px';
-            numberDiv.style.left = (rect.left + rect.width / 2) + 'px';
+            numberDiv.style.top = (rect.y + rect.height*0) + 'px';
+            numberDiv.style.left = (rect.x + rect.width / 2) + 'px';
             numberDiv.style.width = 25;
             numberDiv.style.height = 25;
             numberDiv.style.display = 'flex';
@@ -69,7 +68,7 @@ function getVisibleAndClickableElements () {
             attachElement.appendChild(numberDiv);
         }
     });
-    console.log("Return the elementCoordinates", elementsCoordinates, elementsCoordinates.length);
+    // console.log("Return the elementCoordinates", elementsCoordinates, elementsCoordinates.length);
     return elementsCoordinates;
 }
 
@@ -161,12 +160,67 @@ function isVisible(element) {
     return false; // No points are obscured
 }
 
+function getVisibleRect(element) {
+    
+    if (!(element instanceof Element)) throw Error('DomUtil: elem is not an element.');
+
+    let visibleRect = { x: 0, y: 0, width: 0, height: 0 };
+ 
+    const style = getComputedStyle(element);
+    if (style.display === 'none' || style.visibility !== 'visible') return visibleRect;
+
+    const boundingRect = element.getBoundingClientRect();
+    if (element.offsetWidth + element.offsetHeight + boundingRect.height + boundingRect.width === 0) {
+        return visibleRect;
+    }
+
+    // Check if the element is completely obscured by others
+    let points = [
+        { x: boundingRect.left, y: boundingRect.top },
+        { x: boundingRect.left + boundingRect.width / 2, y: boundingRect.top },
+        { x: boundingRect.right, y: boundingRect.top },
+        { x: boundingRect.left, y: boundingRect.top + boundingRect.height / 2 },
+        { x: boundingRect.left + boundingRect.width / 2, y: boundingRect.top + boundingRect.height / 2 },
+        { x: boundingRect.right, y: boundingRect.top + boundingRect.height / 2 },
+        { x: boundingRect.left, y: boundingRect.bottom },
+        { x: boundingRect.left + boundingRect.width / 2, y: boundingRect.bottom },
+        { x: boundingRect.right, y: boundingRect.bottom }
+    ];
+    
+    let isVisible = false;
+    let minX = Number.MAX_SAFE_INTEGER;
+    let minY = Number.MAX_SAFE_INTEGER;
+    let maxX = Number.MIN_SAFE_INTEGER;
+    let maxY = Number.MIN_SAFE_INTEGER;
+
+    for (const point of points) {
+        const topElement = elementFromPointDeep(point.x, point.y);
+        if (element.contains(topElement) || topElement === element) {
+            minX = Math.min(minX, point.x);
+            minY = Math.min(minY, point.y);
+            maxX = Math.max(maxX, point.x);
+            maxY = Math.max(maxY, point.y);
+            isVisible = true;
+        }
+    }
+
+    if (isVisible) { 
+        visibleRect.x = minX;
+        visibleRect.y = minY;
+        visibleRect.width = Math.max(1, maxX - minX);
+        visibleRect.height = Math.max(1, maxY - minY);
+    }
+
+    return visibleRect; 
+}
+
+
 function doRectsOverlap(rect1, rect2) {
     return !(
-    rect1.right < rect2.left ||
-    rect1.left > rect2.right ||
-    rect1.bottom < rect2.top ||
-    rect1.top > rect2.bottom
+        rect1.right < rect2.left ||
+        rect1.left > rect2.right ||
+        rect1.bottom < rect2.top ||
+        rect1.top > rect2.bottom
     );
 }
 

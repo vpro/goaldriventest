@@ -6,6 +6,7 @@ import os
 import selenium
 import time
 import random
+import base64
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
@@ -14,7 +15,7 @@ from datetime import datetime
 from time import sleep
 
 # OpenAI setup
-openai.model="gpt-4"
+openai.model="gpt-4-vision-preview"
 openai.api_key = os.environ.get('OPENAI_API_KEY')
 openai.organization = os.environ.get('OPENAI_ORGANIZATION')	
 
@@ -26,29 +27,6 @@ if not openai.organization:
 # Other setup
 MAX_STEPS = 10
 USE_ELEMENT_NUMBERS_FOR_CLICK = True
-
-def upload_screenshot_and_get_response(screenshot_path):
-	# with open(screenshot_path, "rb") as f:
-	# 	response = await openai.File.acreate(
-	# 		file=f,
-	# 		user_provided_filename=screenshot_path,
-	# 		purpose="answer"
-	# 	)
-	# 	print("Upload response: " + response)
-	# elementNumber = random.randint(1, 15)
-	#elementNumber = int(input('Give the next elementNumber: '))
-	print ("Give the JSON from OpenAI: ")
-	lines = []
-	while True:
-		line = input()
-		if not line:
-			break
-		lines.append(line)
-	multiline_input = '\n'.join(lines)
-	return json.loads(multiline_input)
-	#return { "description": "Click on the button", "action": { "actionType": "scroll", "elementNumber": elementNumber, "x": 50, "y": 60 }, "expectation": "The button will be clicked", "step": 1, "achieved": False, "expectationSatisfied": False, "goal": "Click on the button}" }
-	# return json.loads(response.choices[0].text)  # This assumes a text-based output, but you'd extract the relevant data as per your API setup
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Starting URL")
@@ -62,11 +40,6 @@ elif args.browser == "firefox":
 	browser = webdriver.Firefox()
 else:
 	raise ValueError("Browser not recognized")
-
-print(f"Loading {args.url}")
-browser.get(args.url)
-browser.implicitly_wait(10)  # wait at most 10 seconds for commands to return
-sleep (5)
 
 # We want to inject a script into the page that marks all clickable objects
 # and returns a JSON structure with the coordinates of the clickable objects
@@ -132,13 +105,72 @@ Goal:
 
 prompt_messages = [ { "role": "system", "content": prompt } ]
 
+#print(f"Using the following prompt to initialize OpenAI: {prompt}")
 
-print(f"Using the following prompt to initialize OpenAI: {prompt}")
 
-#response = openai.ChatCompletion.create(
-#	messages=prompt_messages, 
-#	model=openai.model)
-#print(response)
+# Function to encode the image
+def encode_image(image_path):
+	with open(image_path, "rb") as image_file:
+		return base64.b64encode(image_file.read()).decode('utf-8')
+	
+def upload_screenshot_and_get_response(screenshot_path):
+	base64_image = encode_image(screenshot_path)
+
+	temp_prompt_messages = prompt_messages.copy()
+
+	temp_prompt_messages.append(
+		{
+			"role": "user",
+			"content": [
+				{
+					"type": "text",
+					"text": "Continue with this image, what's your next action?"
+				},
+				{
+					"type": "image_url",
+					"image_url": {
+						"url": f"data:image/jpeg;base64,{base64_image}"
+					}
+				}
+			]
+		}
+	)
+
+	response = openai.ChatCompletion.create(
+		messages=temp_prompt_messages, 
+		model=openai.model,
+		max_tokens=300)
+	json_response = json.loads(response.choices[0].message.content.strip('```json').strip('```').strip())
+	print ("\n\n------------------")
+	print (response.choices[0].message.content.strip('```json').strip('```').strip())
+	print ("\n####")
+	print(json_response)
+	print ("####")
+#	prompt_messages.append({ "role": "user", "content": "Continue with this image, what's your next action?" })
+#	prompt_messages.append({ "role": "assistent", "content": json_response["description"] })
+
+	print("Prompts collected so far: ", prompt_messages)
+
+	return json_response
+
+	# print ("Give the JSON from OpenAI: ")
+	# lines = []
+	# while True:
+	# 	line = input()
+	# 	if not line:
+	# 		break
+	# 	lines.append(line)
+	# multiline_input = '\n'.join(lines)
+	# return json.loads(multiline_input)
+	#return { "description": "Click on the button", "action": { "actionType": "scroll", "elementNumber": elementNumber, "x": 50, "y": 60 }, "expectation": "The button will be clicked", "step": 1, "achieved": False, "expectationSatisfied": False, "goal": "Click on the button}" }
+	# return json.loads(response.choices[0].text)  # This assumes a text-based output, but you'd extract the relevant data as per your API setup
+
+
+# Main loop
+print(f"Loading {args.url}")
+browser.get(args.url)
+browser.implicitly_wait(10)  # wait at most 10 seconds for commands to return
+sleep (5)
 
 step = 0
 achieved = False
@@ -147,10 +179,10 @@ while not achieved and step < MAX_STEPS:
 	print (f"Step {step} started")
 	result_json_string = browser.execute_script(scriptContents)
 	clickableElements = json.loads(result_json_string)
-	print(clickableElements)	# Taking screenshot
+	#print(clickableElements)	# Taking screenshot
 
 	screenshot_path = f"screenshot_{step}.png"
-	print("Taking screenshot step={step}")
+	print(f"Taking screenshot step={step}")
 	browser.save_screenshot(screenshot_path)
 
 	# Upload to OpenAI and get JSON response
