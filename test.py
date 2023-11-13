@@ -7,9 +7,11 @@ import selenium
 import time
 import random
 import base64
+import html
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
+from selenium.webdriver.support.ui import WebDriverWait
 
 from datetime import datetime
 from time import sleep
@@ -27,6 +29,7 @@ if not openai.organization:
 # Other setup
 MAX_STEPS = 10
 USE_ELEMENT_NUMBERS_FOR_CLICK = True
+BROWSER_DELAY_SECS = 3	# Time to wait after each action
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="Starting URL")
@@ -60,7 +63,7 @@ except Exception as e:
 prompt = """
 You are going to test a website. You will be given a URL and a screenshot of the website with that URL.  
 You try to understand the screenshots content and layout. From that you determine what the next logical 
-action will be to reach the given goal below.
+action will be to reach the given goal below. Be sure not to repeat steps, look into your last actions for that.
 
 Every time you receive a screenshot of the website you determine your next action. 
 You return a JSON structure that contains that action in the following form, all other fields are required:
@@ -68,13 +71,12 @@ You return a JSON structure that contains that action in the following form, all
 - "action": # The action you are going to take.
    "actionType": "click", #Identify the primary user action that can be taken on the screenshot (e.g., "click", "scroll", etc.),
    "elementNumber": 1, # The number of the element that is to be acted upon. The number is determined by the number in the yellow box around the element in the screenshot. 
-    "x": The horizontal percentage coordinate where the action is to be taken, most normaly the center of the element
-    "y": The vertical percentage coordinate where the action is to be taken, most normaly the center of the element
-  }
+   }
 - "expectation": Your prediction of what will happen when the action is taken. You are going to check this in the next step!
 - "step": A number representing the order or sequence of the action in achieving the goal.
 - "achieved": A boolean (true or false) indicating if the goal has been achieved or not. If so, action can be empty as this run is finished.
-- "expectationSatisfied": A boolean (true or false) indicating if the previous action's expectation was met. Remember to evaluate the expectation of the previous step to carefully determine if it was met or not.
+- "previousExpectation": the expectation of the previous step.
+- "expectationSatisfied": A boolean (true or false) indicating if the previous expectation was met. Remember to evaluate the expectation of the previous step to carefully determine if it was met or not.
 - "goal": Restate  the overarching goal you are trying to reach.
 - "frustrationLevel": A number between 1 and 10 indicating how frustrated you are with the website. 1 is not frustrated at all, 10 is very frustrated. 
 - "frustrationLevelReason": A brief description of where your frustrationLevel is coming from.
@@ -84,15 +86,12 @@ The are two actions possible: "click" and "scroll".
 The "action" structure with actionType "click" contains:
 1. actionType (required)
 2. elementNumber (required)
-3. x and y (required)
 
 The action with actionType "scroll" always contains:
 1. actionType (required)
-2. elementNumber (optional)
-3. x and y (optional)
-4. "direction" (required). can be "up", "down", "left", "right"
-5. "distance" (required). The distance to scroll can be "little", "medium" or "far"
-If either elementNumber or x,y are given, the scroll is tried on the element or coordinates. Otherwise the scroll is done on the whole page.
+2. elementNumber (required, make it zero to scroll whole page instead of the element)
+3. "direction" (required). can be "up", "down", "left", "right"
+4. "distance" (required). The distance to scroll can be "little", "medium" or "far"
 
 If there is any cookiebar present, please click it away first.
 
@@ -107,13 +106,109 @@ prompt_messages = [ { "role": "system", "content": prompt } ]
 
 #print(f"Using the following prompt to initialize OpenAI: {prompt}")
 
-
 # Function to encode the image
 def encode_image(image_path):
 	with open(image_path, "rb") as image_file:
 		return base64.b64encode(image_file.read()).decode('utf-8')
+
+def write_prompts_to_html_file(prompt_messages):
+	with open("prompts.txt.tmp", "w") as temp_prompt_file:
+		temp_prompt_file.write(json.dumps(prompt_messages, indent=4))
+
+	html_content = """<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>JSON Presentation</title>
+		<style>
+			.container {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				justify-content: center;
+			}
+			.image {
+				margin: 10px;
+				cursor: pointer;
+			}
+			img {
+				max-width: 600px;
+				max-height: 600px;
+			}
+			.fullscreen {
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				background-color: rgba(0, 0, 0, 0.9);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				z-index: 9999;
+			}
+			.fullscreen img {
+				max-width: 100%;
+				max-height: 100%;
+			}
+			.json {
+				margin: 10px;
+				padding: 10px;
+				background-color: #f5f5f5;
+				border-radius: 5px;
+				box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+				overflow: auto;
+				max-height: 80vh;
+				width: 50%;
+			}
+			.json pre {
+				white-space: pre-wrap;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+	"""		
+	step = 0
+	for prompt_message in prompt_messages:
+		if prompt_message["role"] == "assistant":
+			json_data = json.loads(prompt_message["content"].strip('```json').strip('```').strip())
+			image_data = encode_image(f"screenshot_{step}.png")
+			html_content += f"""
+			<div class="image" onclick="toggleFullscreen(this)">
+				<img src="data:image/png;base64,{image_data}" />
+			</div>
+			<div class="json">
+				<pre>{json.dumps(json_data, indent=4)}</pre>
+			</div>
+			"""
+			step += 1
+
+	html_content += """
+		</div>
+		<script>
+			function toggleFullscreen(element) {
+				element.classList.toggle('fullscreen');
+			}
+		</script>
+	</body>
+	</html>
+	"""
+
+	with open("prompts.html", "w") as prompt_file:
+		prompt_file.write(html_content)
+
+
+#with open("prompts.txt.bak", "r") as input_prompt_file:
+#	prompt_messages = json.load(input_prompt_file)
+#	write_prompts_to_html_file (prompt_messages)
+#
+#exit(0)
+
+
 	
-def upload_screenshot_and_get_response(screenshot_path):
+def upload_screenshot_and_get_response(screenshot_path, step):
 	base64_image = encode_image(screenshot_path)
 
 	temp_prompt_messages = prompt_messages.copy()
@@ -124,7 +219,7 @@ def upload_screenshot_and_get_response(screenshot_path):
 			"content": [
 				{
 					"type": "text",
-					"text": "Continue with this image, what's your next action?"
+					"text": f"This is step {step}. Continue with this image, what's your next action?"
 				},
 				{
 					"type": "image_url",
@@ -142,35 +237,25 @@ def upload_screenshot_and_get_response(screenshot_path):
 		max_tokens=300)
 	json_response = json.loads(response.choices[0].message.content.strip('```json').strip('```').strip())
 	print ("\n\n------------------")
-	print (response.choices[0].message.content.strip('```json').strip('```').strip())
-	print ("\n####")
+	#print (response.choices[0].message.content.strip('```json').strip('```').strip())
+	#print ("\n####")
 	print(json_response)
-	print ("####")
-#	prompt_messages.append({ "role": "user", "content": "Continue with this image, what's your next action?" })
-#	prompt_messages.append({ "role": "assistent", "content": json_response["description"] })
+	#print(json_response["description"], json_response["elementNumber"], json_response["actionType"])
+	#print ("####")
+	prompt_messages.append({ "role": "user", "content": "Continue with this image, what's your next action?" })
+	prompt_messages.append({ "role": "assistant", "content": response.choices[0].message.content }) # json_response["description"] })
 
-	print("Prompts collected so far: ", prompt_messages)
+	#print("Prompts collected so far: ", prompt_messages)
+	write_prompts_to_html_file(prompt_messages)
 
 	return json_response
 
-	# print ("Give the JSON from OpenAI: ")
-	# lines = []
-	# while True:
-	# 	line = input()
-	# 	if not line:
-	# 		break
-	# 	lines.append(line)
-	# multiline_input = '\n'.join(lines)
-	# return json.loads(multiline_input)
-	#return { "description": "Click on the button", "action": { "actionType": "scroll", "elementNumber": elementNumber, "x": 50, "y": 60 }, "expectation": "The button will be clicked", "step": 1, "achieved": False, "expectationSatisfied": False, "goal": "Click on the button}" }
-	# return json.loads(response.choices[0].text)  # This assumes a text-based output, but you'd extract the relevant data as per your API setup
-
-
 # Main loop
 print(f"Loading {args.url}")
+browser.set_window_size(1024, 1366)
 browser.get(args.url)
 browser.implicitly_wait(10)  # wait at most 10 seconds for commands to return
-sleep (5)
+sleep (BROWSER_DELAY_SECS)
 
 step = 0
 achieved = False
@@ -186,7 +271,7 @@ while not achieved and step < MAX_STEPS:
 	browser.save_screenshot(screenshot_path)
 
 	# Upload to OpenAI and get JSON response
-	response_json = upload_screenshot_and_get_response(screenshot_path)
+	response_json = upload_screenshot_and_get_response(screenshot_path, step)
 	print (response_json)
 	
 	# Update variables based on the response
@@ -204,7 +289,7 @@ while not achieved and step < MAX_STEPS:
 	y = -1
 	elementIndex = -1
 	if "elementNumber" in action:
-		elementIndex = action["elementNumber"] - 1
+		elementIndex = action["elementNumber"]
 	if USE_ELEMENT_NUMBERS_FOR_CLICK and elementIndex >= 0 and elementIndex < len(clickableElements):
 		clickableElement = clickableElements[elementIndex]
 		x = clickableElement["x"] + clickableElement["width"] / 2
@@ -227,6 +312,8 @@ while not achieved and step < MAX_STEPS:
 		#				 	if (!inner) break; element = inner; } return element; 
 		#				 } 
 		#				 elementFromPointDeep(%d, %d)?.click()""" % (x, y))
+		print ("Clicking x, y: ", x, y)
+		print ("Clicking x, y:", max(0, min(x, size["width"])), max(0, min(y, size["height"])))
 		browserAction = ActionChains(browser)
 		browserAction.move_by_offset(max(0, min(x, size["width"])), max(0, min(y, size["height"]))).click().perform()
 		browserAction.reset_actions()
@@ -275,7 +362,14 @@ while not achieved and step < MAX_STEPS:
 		raise ValueError("Action not recognized")
 		
 	# wait for action to complete
-	sleep(5)	
+	print ("Waiting for action to complete")
+	try:
+		sleep(BROWSER_DELAY_SECS)
+		# WebDriverWait(browser, 10).until(lambda browser: browser.execute_script('return document.readyState') == 'complete')
+	finally:
+		print("Site didn't load in time, proceeding anyway")
+
+	#sleep(BROWSER_DELAY_SECS)	
 
 	step += 1
 
