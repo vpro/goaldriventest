@@ -1,4 +1,5 @@
-return JSON.stringify(getVisibleAndClickableElements ());
+window.elementInfo = getVisibleAndClickableElements ();
+//return JSON.stringify(elementInfo);
 
 function getVisibleAndClickableElements () { 
     // Collect all clickable elememts, also the ones in the shadowdoms
@@ -8,7 +9,7 @@ function getVisibleAndClickableElements () {
     // get rid of cookie consent first
     const cookieConsent = document.getElementById("ccm_notification_host");
     if (cookieConsent && window.getComputedStyle(cookieConsent).visibility !== 'hidden' && cookieConsent.shadowRoot) {
-        cookieConsent.shadowRoot.replaceChildren("");
+        //cookieConsent.shadowRoot.replaceChildren("");
     }
 
     // Maak een lijst van objecten met de coördinaten en het element, clear any old ones first if present 
@@ -49,21 +50,22 @@ function getVisibleAndClickableElements () {
 
             // Create a div with the number of the element
             const numberDiv = document.createElement('div');
-            numberDiv.innerText = elementsCoordinates.length;
+            numberDiv.innerText = elementsCoordinates.length - 1;
             numberDiv.style.position = 'absolute';
-            numberDiv.style.top = (rect.y + rect.height*0) + 'px';
-            numberDiv.style.left = (rect.x + rect.width / 2) + 'px';
-            numberDiv.style.width = 25;
-            numberDiv.style.height = 25;
+            numberDiv.style.top = (rect.y + rect.height*0 - 5) + 'px';
+            numberDiv.style.left = (rect.x + rect.width / 8) + 'px';
+            numberDiv.style.width = 30;
+            numberDiv.style.height = 30;
             numberDiv.style.display = 'flex';
             numberDiv.style.justifyContent = 'center';
             numberDiv.style.alignItems = 'center';
-            numberDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.8)';
+            numberDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.85)';
             numberDiv.style.borderRadius = '100%';
-            numberDiv.style.fontSize = '12px';
+            numberDiv.style.fontSize = '16px';
             numberDiv.style.fontWeight = 'bold';
             numberDiv.style.color = 'black';
             numberDiv.style.zIndex = '99999999999';
+            numberDiv.style.pointerEvents = 'none';
 
             attachElement.appendChild(numberDiv);
         }
@@ -242,4 +244,12 @@ function clipRect(rectToClip, clippingRect) {
     rectToClip.height = Math.max(rectToClip.height, 0);
 
     return rectToClip;
+}
+
+function markClickableElement(elementIndex) {
+    const attachElement = document.getElementById("test_all_numbers");
+    if (elementIndex >= 0 && elementIndex < attachElement.length) {
+        attachElement.childNodes(elementIndex).style.backgroundColor = 'rgba(255, 0, 0, 0.85)';
+        clickableElements[elementIndex].element.style.backgroundColor = 'rgba(255, 0, 0, 0.85)';
+    }
 }

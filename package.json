@@ -1,0 +1,22 @@
+{
+  "name": "goaldriventest",
+  "version": "0.0.1",
+  "description": "Ask AI to test your website with a specific goal",
+  "main": "test.js",
+  "scripts": {
+    "test": "npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": ".git"
+  },
+  "author": "M. Elhorst",
+  "license": "ISC",
+  "dependencies": {
+    "argparse": "^2.0.1",
+    "axios": "^1.6.1",
+    "luxon": "^3.4.4",
+    "openai": "^4.17.4",
+    "puppeteer": "^21.5.1"
+  }
+}
