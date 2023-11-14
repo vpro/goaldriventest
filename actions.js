@@ -3,6 +3,19 @@ class Action {
         this.actionType = actionType;
     }
 
+    async perform(page, actionPayload) { // returns "info about action"
+        throw new Error('Perform method must be implemented by subclasses');
+    }
+
+    getPromptInfo() {
+        throw new Error('getPromptInfo method must be implemented by subclasses');
+    }
+
+    getDescriptionHTML(actionPayload) {
+        throw new Error('getDescriptionHTML method must be implemented by subclasses');
+    }
+
+    // Helper functions
     async getElementInfo(page, actionPayload) {
         if (actionPayload.elementNumber === undefined) {
             return undefined;
@@ -28,18 +41,24 @@ class Action {
         return { x: element.x + element.width / 2, y: element.y + element.height / 2 };
     }
 
-    async perform(page, actionPayload) {
-        throw new Error('Perform method must be implemented by subclasses');
-    }
-
-    getPromptInfo() {
-        throw new Error('getPromptInfo method must be implemented by subclasses');
-    }
 }
 
 class ClickAction extends Action {
     constructor() {
         super('click');
+    }
+
+    async perform(page, actionPayload) {
+        if (actionPayload.actionType !== this.actionType) {
+            throw new Error('Action type does not match');
+        }
+
+        const xy = await this.getXY(page, actionPayload);
+        const info = `Clicking at ${xy?.x}, ${xy?.y}`;
+        if (xy !== undefined) {
+             await page.mouse.click(xy.x, xy.y);
+        }    
+        return info; 
     }
 
     getPromptInfo() {
@@ -48,13 +67,14 @@ class ClickAction extends Action {
         2. "elementNumber": The number of the element that is to be acted upon. The number is determined by the number in the yellow box around the element in the screenshot.  (required)`;
     }
 
-    async perform(page, actionPayload) {
-        const xy = await this.getXY(page, actionPayload);
-        if (xy !== undefined) {
-            console.log("Clicking ", xy);
-            await page.mouse.click(xy.x, xy.y);
-        }     
-    }
+    getDescriptionHTML(actionPayload) {
+        if (actionPayload.actionType !== this.actionType) {
+            throw new Error('Action type does not match');
+        }
+        return `
+            <span id="action-icon">👆 ${actionPayload.actionType}</span>
+             <p><b>Element Number:</b> <span id="elementNumber">${actionPayload.elementNumber}</span></p>`;
+    }    
 }
 
 class ScrollAction extends Action {
@@ -62,20 +82,15 @@ class ScrollAction extends Action {
         super('scroll');
     }
 
-    getPromptInfo () {
-        return `To scroll the page or inside an element use the following action structure:
-        1. "actionType": "scroll" (required)
-        2. "elementNumber": The number of the element or zero to scroll the page (required)
-        3. "direction": either "up", "down", "left", "right" (required)
-        4. "distance": either "little", "medium" or "far" (required)`;
-    }
-
     async perform(page, actionPayload) {
+        if (actionPayload.actionType !== this.actionType) {
+            throw new Error('Action type does not match');
+        }
+
         let xy = await this.getXY(page, actionPayload);
         if (xy === undefined) {
             xy = { x: 0, y: 0 };
         }
-        console.log("Moving mouse to ", xy);
         await page.mouse.move(xy.x, xy.y);
 
         let distanceX, distanceY;
@@ -116,8 +131,28 @@ class ScrollAction extends Action {
             throw new Error("direction should be given in scroll action");
         }
 
-        console.log("Scrolling ", { deltaX: deltaX, deltaY: deltaY });
+        const info = `Scrolling deltaX: ${deltaX}, deltaY: ${deltaY}`;
         await page.mouse.wheel({ deltaX: deltaX, deltaY: deltaY });
+        return info;
+    }
+
+    getPromptInfo () {
+        return `To scroll the page or inside an element use the following action structure:
+        1. "actionType": "scroll" (required)
+        2. "elementNumber": The number of the element or zero to scroll the page (required)
+        3. "direction": either "up", "down", "left", "right" (required)
+        4. "distance": either "little", "medium" or "far" (required)`;
+    }
+
+    getDescriptionHTML(actionPayload) {
+        if (actionPayload.actionType !== this.actionType) {
+            throw new Error('Action type does not match');
+        }
+        return `
+            <span id="action-icon">🖱️ ${actionPayload.actionType}</span>
+            <p><b>Element Number:</b> <span id="elementNumber">${actionPayload.elementNumber}</span></p>
+            <p><b>Distance:</b> <span id="distance">${actionPayload.distance}</span></p>
+            <p><b>Direction:</b> <span id="direction">${actionPayload.direction}</span></p>`;
     }
 }
 
