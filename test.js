@@ -4,9 +4,8 @@ const puppeteer = require('puppeteer');
 const { ArgumentParser } = require('argparse');
 const { DateTime } = require('luxon');
 const OpenAI = require('openai');
-const actions = require('./actions.js');
-
-console.log(actions);
+const actions = require('./actions');
+const { create_report } = require('./create_report');
 
 // Set up OpenAI
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -34,11 +33,12 @@ parser.add_argument('goal', { help: 'Goal of the test' });
 parser.add_argument('filename', { help: 'Filename to store the results of the test' });
 
 parser.add_argument('-b', '--browser', { default: 'firefox', help: 'Browser to use (firefox or chrome)' });
-parser.add_argument('--simulate', { help: 'Simulate the test run from the json file from a previous recording' });
-parser.add_argument('--store', { help: 'Save the test run to json file for use by simulate' });
+parser.add_argument('--playback', { help: 'playback the test run from the json file from a previous recording' });
+parser.add_argument('--store', { help: 'Save the test run to json file for use by playback' });
+parser.add_argument('-H', '--headless', { default: true, help: 'Use a headless browser or not' });
 
 const args = parser.parse_args();
-const startime = DateTime.now().toFormat('yyyy-LL-dd HH:mm:ss')
+const startime = DateTime.now()
 
 let prompt = `
 You are going to test a website. You will be given a URL and a screenshot of the website with that URL.  
@@ -80,263 +80,37 @@ function write_prompts (filename, prompt_messages)
     }
 } 
 
-let simulatePromptMessages = []
+let playbackPromptMessages = []
 function read_prompts (filename)
 {
-    simulatePromptMessages = JSON.parse (fs.readFileSync(filename, 'utf8'));
+    playbackPromptMessages = JSON.parse (fs.readFileSync(filename, 'utf8'));
 } 
 
-function write_html (filename, prompt_messages, screenshots, actionResults) 
+async function get_screenshot (page, mark_clickable_objects = true)
 {
-    if (screenshots.length !== actionResults.length) {
-        throw new Error('Number of screenshots and action results do not match');
+    if (mark_clickable_objects) {
+        // Label all clickable elements
+        const scriptContents = fs.readFileSync('mark_clickable_objects.js', 'utf8');
+        await page.evaluate(scriptContents);
     }
 
-    let html_content = `<!DOCTYPE html>
-	<html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>JSON Presentation</title>
-		<style>
-			.container {
-				display: flex;
-				flex-wrap: wrap;
-				align-items: center;
-				justify-content: center;
-			}
-            .intro {
-                border: 1px solid #ddd;
-                padding: 15px;
-                margin: 10px;
-                border-radius: 5px;
-                box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            }
-            .intro h1 {
-                color: #333;
-            }
-			.image {
-				margin: 10px;
-				cursor: pointer;
-			}
-			img {
-				max-width: 600px;
-				max-height: 600px;
-			}
-			.fullscreen {
-				position: fixed;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background-color: rgba(0, 0, 0, 0.9);
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				z-index: 9999;
-			}
-			.fullscreen img {
-				max-width: 100%;
-				max-height: 100%;
-			}
-			.json {
-				margin: 10px;
-				padding: 10px;
-				background-color: #f5f5f5;
-				border-radius: 5px;
-				box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
-				overflow: auto;
-				max-height: 80vh;
-				width: 50%;
-			}
-			.json pre {
-				white-space: pre-wrap;
-			}
-
-            .action-card {
-                border: 1px solid #ddd;
-                padding: 15px;
-                margin: 10px;
-                border-radius: 5px;
-                box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            }
-            .action-card h2 {
-                color: #333;
-            }
-            #action-icon {
-                font-size: 3em;
-            }            
-		</style>
-	</head>
-	<body>
-        <script>
-        class Dial extends HTMLElement {
-            constructor() {
-                super();
-                this.attachShadow({ mode: 'open' });
-            }
-        
-            connectedCallback() {
-                this.render();
-            }
-        
-            render() {
-                const level = parseInt(this.getAttribute('level') || 1);
-                const angle = this.levelToAngle(level);
-                const svgNS = "http://www.w3.org/2000/svg";
-        
-                // Create SVG
-                const svg = document.createElementNS(svgNS, 'svg');
-                svg.setAttribute('width', '200');
-                svg.setAttribute('height', '120');
-                svg.setAttribute('viewBox', '0 0 200 100');
-        
-                // Create semi-circular gradient
-                const path = document.createElementNS(svgNS, 'path');
-                path.setAttribute('d', 'M 10,90 A 80,80 0 0,1 190,90');
-                path.style.fill = 'none';
-                path.style.stroke = 'url(#gradient)';
-                path.style.strokeWidth = '20';
-                svg.appendChild(path);
-        
-                // Create pointer
-                const line = document.createElementNS(svgNS, 'line');
-                line.setAttribute('x1', '100');
-                line.setAttribute('y1', '90');
-                line.setAttribute('x2', '100');
-                line.setAttribute('y2', '20');
-                line.style.stroke = 'black';
-                line.style.strokeWidth = '2';
-                line.setAttribute('transform', \`rotate(\${angle} 100 90)\`);
-                svg.appendChild(line);
-        
-                // Create gradient
-                const defs = document.createElementNS(svgNS, 'defs');
-                const linearGradient = document.createElementNS(svgNS, 'linearGradient');
-                linearGradient.setAttribute('id', 'gradient');
-                linearGradient.setAttribute('x1', '0%');
-                linearGradient.setAttribute('y1', '0%');
-                linearGradient.setAttribute('x2', '100%');
-                linearGradient.setAttribute('y2', '0%');
-                const stop1 = document.createElementNS(svgNS, 'stop');
-                stop1.setAttribute('offset', '0%');
-                stop1.setAttribute('stop-color', 'green');
-                const stop2 = document.createElementNS(svgNS, 'stop');
-                stop2.setAttribute('offset', '100%');
-                stop2.setAttribute('stop-color', 'red');
-                linearGradient.appendChild(stop1);
-                linearGradient.appendChild(stop2);
-                defs.appendChild(linearGradient);
-                svg.appendChild(defs);
-        
-                // Clear and append new content
-                this.shadowRoot.innerHTML = '';
-                this.shadowRoot.appendChild(svg);
-            }
-        
-            levelToAngle(level) {
-                // Adjust the formula for a semi-circle (180 degrees)
-                return (level - 1) * 18 - 90; // Assuming 10 levels, 180 degrees / 10 = 18 degrees per level, offset by -90 degrees
-            }
-        }
-        
-        // Define the new element
-        customElements.define('my-dial', Dial);
-        
-        </script>        
-		<div class="container">
-	`;
-
-    html_content += `<div class="intro">
-    <h1>Goal: ${args.goal}</h1>
-    <p>URL: ${args.url}</p>
-    <p>Start time: ${startime}</p>
-    <p>End time: ${DateTime.now().toFormat('yyyy-LL-dd HH:mm:ss')}</p>
-    <p>Number of steps: ${actionResults.length}</p>
-    <p>Goal achieved: ${actionResults.length > 0 && actionResults[actionResults.length - 1].achieved ? 'Yes' : 'No'}</p>
-    <p>Browser: ${args.browser}</p>
-    </div>`;            
-
-	let step = 0
-	prompt_messages.forEach(prompt_message => {
-        if (prompt_message.role === "assistant") {
-            let json_data = JSON.parse(prompt_message.content.replace('```json\n', '').replace('\n```', ''))
-
-            const actionPayload = json_data.action;
-            let action_Html = ""
-            if (actionPayload) {
-                const action = actions[actionPayload.actionType];
-                console.log(action);
-                if (!action) {
-                    throw new Error('Action not recognized');
-                }
-                action_Html = action.getDescriptionHTML(actionPayload);
-            }
-
-			html_content += `<div class="image" onclick="toggleFullscreen(this)">
-				<img src="data:image/png;base64,${screenshots[step]}" alt="Screenshot ${step}" />
-			</div>
-            <div class="action-card">
-                <h2>Step ${step}</h2>
-                <div class="action">
-                    ${action_Html}
-                    <p><b>Action result:</b> <span id="actionResult">${actionResults[step]}</span></p>                
-                </div>
-                <p><b>Description:</b> <span id="description">${json_data.description}</span></p>
-                <p><b>Expectation:</b> <span id="expectation">${json_data.expectation}</span></p>
-                <p/>
-                <p><b>Expectation of previous step:</b> <span id="description">${json_data.previousExpectation}</span></p>
-                <p><b>Expectation met:</b> <span id="expectation">${json_data.expectationSatisfied}</span></p>
-                <div class="frustration-level">
-                    <b>Frustration Level:</b>
-                    <my-dial level="${json_data.frustrationLevel}"></my-dial>
-                    <span id="frustrationLevel">${json_data.frustrationLevel}</span>
-                </div>
-                <p><b>Frustration Level Reason:</b> <span id="frustrationLevelReason">${json_data.frustrationLevelReason}.</span></p>
-            </div>`;
-            /*
-			<div class="json">
-				<pre>{`
-            html_content += JSON.stringify(json_data, null, 4)
-            html_content += `}</pre>
-			</div>
-			`*/
-			step += 1
-        }
-    });
-
-	html_content += `
-		</div>
-		<script>
-			function toggleFullscreen(element) {
-				element.classList.toggle('fullscreen');
-			}
-		</script>
-	</body>
-	</html>
-	`
-
-    const file = fs.openSync(filename, 'w')
-    if (file !== undefined) {
-        fs.writeSync(file, html_content)
-        fs.closeSync(file)
-    }
+    // Make a screenshot
+    return await page.screenshot({ type: 'jpeg', encoding: "base64" });
 }
-
 
 // Main function
 async function main() {
     let browser;
     if (args.browser === 'chrome') {
-        browser = await puppeteer.launch({ headless: false, args: ['--no-sandbox'] });
+        browser = await puppeteer.launch({ headless: (args.headless ? "new" : false), args: ['--no-sandbox'] });
     } else if (args.browser === 'firefox') {
-        browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'], product: 'firefox' });
+        browser = await puppeteer.launch({ headless: args.headless, args: ['--no-sandbox'], product: 'firefox' });
     } else {
         throw new Error('Browser not recognized');
     }
 
-    if (args.simulate) {
-        read_prompts(args.simulate);
+    if (args.playback) {
+        read_prompts(args.playback);
     }
 
     const page = await browser.newPage();
@@ -346,24 +120,20 @@ async function main() {
         throw new Error('Could not navigate to URL');
     }
 
-    // Our testing loop
-    let step = 0;
-    let achieved = false;
     const screenshots = [];
     const actionResults = [];
     let prompt_messages = [ { "role": "system", "content": prompt } ]
 
+    await new Promise(resolve => setTimeout(resolve, BROWSER_DELAY_MSECS));
+    screenshots.push(await get_screenshot (page, true));
+
+    // Our testing loop
+    let step = 0;
+    let achieved = false;
+
     while(step < MAX_STEPS && !achieved) { 
-        await new Promise(resolve => setTimeout(resolve, BROWSER_DELAY_MSECS));
-
         console.log('Step ' + step);
-        // Label all clickable elements
-        const scriptContents = fs.readFileSync('mark_clickable_objects.js', 'utf8');
-        await page.evaluate(scriptContents);
-
-        // Make a screenshot
-        screenshots.push(await page.screenshot({ type: 'jpeg', encoding: "base64" }));
-
+ 
         // Let OpenAI decide what action to take given the screenshot and the prompt
         let temp_prompt_messages = prompt_messages
         temp_prompt_messages.push({
@@ -383,8 +153,8 @@ async function main() {
 		})
 
         let response;
-        if (args.simulate && simulatePromptMessages.length > 0) {
-            //simulatePromptMessages.shift();
+        if (args.playback && playbackPromptMessages.length > 0) {
+            //playbackPromptMessages.shift();
             response = {
                 choices: [
                     {
@@ -431,28 +201,32 @@ async function main() {
         }
         prompt_messages.push({ role: 'user', content: 'Continue with this image, what\'s your next action?' });
         prompt_messages.push({ role: 'assistant', 'content': response.choices[0].message.content });
-console.log(prompt_messages);
+        console.log(prompt_messages);
 
         let jsonString = response.choices[0].message.content.replace('```json\n', '').replace('\n```', '');
         let jsonObject = JSON.parse(jsonString);
 
-        if (jsonObject.achieved === true) {
+        if (jsonObject.achieved === false) {
+
+            if (jsonObject.action === undefined || jsonObject.action.actionType === undefined) {
+                throw new Error('No valid action defined');
+            }
+
+            // Perform the action
+            const action = actions[jsonObject.action.actionType];
+            if (!action) {
+                throw new Error('Action not recognized');
+            }
+            actionResults.push(await action.perform(page, jsonObject.action));
+            await new Promise(resolve => setTimeout(resolve, BROWSER_DELAY_MSECS));
+        }
+        else {
             achieved = true;
-            console.log('Goal achieved!');
-            break;
-        }
-        if (jsonObject.action === undefined || jsonObject.action.actionType === undefined) {
-            throw new Error('No valid action defined');
         }
 
-        // Perform the action
-        const action = actions[jsonObject.action.actionType];
-        if (!action) {
-            throw new Error('Action not recognized');
-        }
-        actionResults.push(await action.perform(page, jsonObject.action));
+        screenshots.push(await get_screenshot (page, true));
 
-        write_html (args.filename, prompt_messages, screenshots, actionResults);
+        create_report (args.filename, prompt_messages, screenshots, actionResults, args, startime);
         if (args.store) {
             write_prompts (args.store, prompt_messages);
         }
