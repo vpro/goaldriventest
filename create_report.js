@@ -4,11 +4,15 @@ const fs = require('fs');
 
 // Todo: make the arguments for this function more generic
 
+function contentToJson(content) {
+    return JSON.parse(content.replace('```json\n', '').replace('\n```', ''))
+}
+
 function create_report (filename, prompt_messages, screenshots, actionResults, args, startime) 
 {
-    if (screenshots.length !== actionResults.length + 1) {
-        throw new Error('Number of screenshots and action results do not match');
-    }
+//    if (screenshots.length !== actionResults.length + 1) {
+//        throw new Error('Number of screenshots and action results do not match');
+//    }
 
     let html_content = `<!DOCTYPE html>
 	<html lang="en">
@@ -40,7 +44,7 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
                 margin: 10px;
                 border-radius: 5px;
                 box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                width: 50%;
+                width: 60%;
             }
             .intro h1 {
                 color: #333;
@@ -87,13 +91,19 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
                 margin: 10px;
                 border-radius: 5px;
                 box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                width: 50%;
+                width: 60%;
             }
             .action-card h2 {
                 color: #333;
             }
             #action-icon {
                 font-size: 3em;
+            }
+            #expectation-success {
+                color: green;
+            }
+            #expectation-failed {
+                color: red;
             }            
 		</style>
 	</head>
@@ -183,8 +193,8 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
             <p>URL: ${args.url}</p>
             <p>Start time: ${startime.toFormat('yyyy-LL-dd HH:mm:ss')}</p>
             <p>End time: ${DateTime.now().toFormat('yyyy-LL-dd HH:mm:ss')}</p>
-            <p>Number of steps: ${actionResults.length}</p>
-            <p>Goal achieved: ${actionResults.length > 0 && actionResults[actionResults.length - 1].achieved ? 'Yes' : 'No'}</p>
+            <p>Number of steps: ${screenshots.length - 1}</p>
+            <p>Goal achieved: ${prompt_messages.length > 0 && contentToJson(prompt_messages[prompt_messages.length - 1].content).achieved ? 'Yes' : 'No'}</p>
             <p>Browser: ${args.browser}</p>
         </div>
         <div class="image" onclick="toggleFullscreen(this)">
@@ -193,19 +203,29 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
     </div>`;            
 
 	let step = 0
-	prompt_messages.forEach(prompt_message => {
+	for (let i = 0; i < prompt_messages.length; i++) {
+        const prompt_message = prompt_messages[i];
+        
         if (prompt_message.role === "assistant") {
-            let json_data = JSON.parse(prompt_message.content.replace('```json\n', '').replace('\n```', ''))
-
+            let json_data = contentToJson(prompt_message.content);
+            let next_json_data;
+            for (let j = i + 1; j < prompt_messages.length; j++) {
+                if (prompt_messages[j].role === "assistant") {
+                    next_json_data = contentToJson(prompt_messages[j].content);
+                    break;
+                }
+            }
             const actionPayload = json_data.action;
             let action_Html = ""
-            if (actionPayload) {
+            if (actionPayload?.actionType) {
                 const action = actions[actionPayload.actionType];
-                console.log(action);
                 if (!action) {
-                    throw new Error('Action not recognized');
+                    throw new Error('Action ' + actionPayload.actionType + ' not recognized');
                 }
-                action_Html = action.getDescriptionHTML(actionPayload);
+                action_Html = `<div class="action">
+                    ${action.getDescriptionHTML(actionPayload)}
+                    <p><b>Action result:</b> <span id="actionResult">${actionResults[step]}</span></p>                
+                    </div>`;
             }
 
 			html_content += `
@@ -213,37 +233,47 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
                 <h2>Step ${step + 1}</h2>
             </step-count>
             <div class="step">
-                 <div class="action-card">
-                     <div class="action">
-                        ${action_Html}
-                        <p><b>Action result:</b> <span id="actionResult">${actionResults[step]}</span></p>                
-                    </div>
-                    <p><b>Description:</b> <span id="description">${json_data.description}</span></p>
-                    <p><b>Expectation:</b> <span id="expectation">${json_data.expectation}</span></p>
-                    <p/>
-                    <p><b>Expectation of previous step:</b> <span id="description">${json_data.previousExpectation}</span></p>
-                    <p><b>Expectation met:</b> <span id="expectation">${json_data.expectationSatisfied}</span></p>
+                 <div class="action-card">                    
+                    ${action_Html}
+                    <p><b>Description:</b> <span id="description">${json_data.description}</span></p>`;
+
+                    
+            if (next_json_data) {
+                if (next_json_data.previousExpectation != json_data.expectation) {
+                    console.log("Warning: previousExpectation is not the same as the current expectation");
+                }
+                html_content +=
+                    `<p/>
+                    <p><b>Expectation:</b> <span id="${next_json_data.expectationSatisfied ? "expectation-success" : "expectation-failed"}">${next_json_data.previousExpectation}</span></p>
                     <div class="frustration-level">
                         <b>Frustration Level:</b>
-                        <my-dial level="${json_data.frustrationLevel}"></my-dial>
-                        <span id="frustrationLevel">${json_data.frustrationLevel}</span>
+                        <my-dial level="${next_json_data.frustrationLevel}"></my-dial>
+                        <span id="frustrationLevel">${next_json_data.frustrationLevel}</span>
                     </div>
-                    <p><b>Frustration Level Reason:</b> <span id="frustrationLevelReason">${json_data.frustrationLevelReason}.</span></p>
+                    <p><b>Frustration Level Reason:</b> <span id="frustrationLevelReason">${next_json_data.frustrationLevelReason}.</span></p>`
+            }
+            else {
+                // This is the last step. We don't know the result of the expectation as we didn't ask the AI, except if the goal was achieved
+                html_content +=
+                    `<p/>
+                    <p><b>Expectation:</b> <span id=${json_data.achieved ? "expectation-success" : "expectation"}}">${json_data.expectation}</span></p>`;
+                if (json_data.achieved) {
+                    html_content += `<p><b>Goal achieved!</b> 🎉</p>`;
+                }
+            }
+            html_content += `
                 </div>
                 <div class="image" onclick="toggleFullscreen(this)">
                     <img src="data:image/png;base64,${screenshots[step + 1]}" alt="Screenshot ${step + 1}" />
                 </div>
             </div>`;
-            /*
-			<div class="json">
-				<pre>{`
-            html_content += JSON.stringify(json_data, null, 4)
-            html_content += `}</pre>
-			</div>
-			`*/
+            
+            // Debug only
+			html_content += `<div class="json"><pre>{${JSON.stringify(json_data, null, 4)}}</pre></div>`;
+
 			step += 1
         }
-    });
+    }
 
 	html_content += `
 		</div>

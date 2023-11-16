@@ -89,7 +89,13 @@ class ScrollAction extends Action {
 
         let xy = await this.getXY(page, actionPayload);
         if (xy === undefined) {
-            xy = { x: 0, y: 0 };
+            // for the moment go to the middle of the page
+            let size = await page.evaluate(() => {
+                return { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight };
+            });
+
+            xy = { x: size.width / 2, y: size.height / 2 };
+            console.log("Scrolling to middle of page", xy);
         }
         await page.mouse.move(xy.x, xy.y);
 
@@ -131,7 +137,7 @@ class ScrollAction extends Action {
             throw new Error("direction should be given in scroll action");
         }
 
-        const info = `Scrolling deltaX: ${deltaX}, deltaY: ${deltaY}`;
+        const info = `Scrolling deltaX: ${deltaX}, deltaY: ${deltaY} on mouse position ${xy.x}, ${xy.y}`;
         await page.mouse.wheel({ deltaX: deltaX, deltaY: deltaY });
         return info;
     }
@@ -139,7 +145,7 @@ class ScrollAction extends Action {
     getPromptInfo () {
         return `To scroll the page or inside an element use the following action structure:
         1. "actionType": "scroll" (required)
-        2. "elementNumber": The number of the element or zero to scroll the page (required)
+        2. "elementNumber": The number of the element or -1 to scroll the page (required)
         3. "direction": either "up", "down", "left", "right" (required)
         4. "distance": either "little", "medium" or "far" (required)`;
     }
