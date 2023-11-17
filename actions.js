@@ -194,9 +194,97 @@ class ScrollAction extends Action {
     }
 }
 
+class NavigateAction extends Action {
+    constructor() {
+        super('navigate');
+    }
+
+    async perform(page, actionPayload) {
+        if (actionPayload.actionType !== this.actionType) {
+            throw new Error('Action type does not match');
+        }
+
+        switch (actionPayload.direction) {
+            case 'back':
+                await page.goBack();
+                break;
+            case 'forward':
+                await page.goForward();
+                break;
+            default:
+                throw new Error('Invalid direction');
+        }
+   
+        return `Navigate ${actionPayload.direction}`; 
+    }
+
+    getPromptInfo() {
+        return `To navigate to the previous or next page use the following action structure:
+        1. "actionType": "navigate" (required)
+        2. "direction": Either "back" or "forward" (required)`;
+    }
+
+    getDescriptionHTML(actionPayload) {
+        if (actionPayload.actionType !== this.actionType) {
+            throw new Error('Action type does not match');
+        }
+        return `
+            <span id="action-icon">↔️ ${actionPayload.actionType} ${actionPayload.direction}</span>`
+    }    
+}
+
+class InputAction extends Action {
+    constructor() {
+        super('input');
+    }
+
+    async perform(page, actionPayload) {
+        if (actionPayload.actionType !== this.actionType) {
+            throw new Error('Action type does not match');
+        }
+
+        if (!actionPayload.text) {
+            throw new Error('No text given');
+        }
+
+ //       const element = await this.getElementInfo(page, actionPayload);
+ //       if (!element) {
+ //           throw new Error('Invalid element number');
+ //       }
+
+   //     console.log("InputAction Element", element);
+
+//        if (element.tagName === 'INPUT') {
+  //          element.value = actionPayload.text;
+    //    } else {
+     //       await element.focus();
+            await page.keyboard.type(actionPayload.text);
+       // }
+
+        return `Add text ${actionPayload.text}`; 
+    }
+
+    getPromptInfo() {
+        return `To fill in text on focused element (by clicking first) use the following action structure:
+        1. "actionType": "input" (required)
+        3. "text": The text to input (required)`;
+    }
+
+    getDescriptionHTML(actionPayload) {
+        if (actionPayload.actionType !== this.actionType) {
+            throw new Error('Action type does not match');
+        }
+        return `
+            <span id="action-icon">↔️ ${actionPayload.actionType} ${actionPayload.direction}</span>`
+    }    
+}
+
+
 const actions = {
     click: new ClickAction(),
     scroll: new ScrollAction(),
+    navigate: new NavigateAction(),
+    input: new InputAction(),
 };
 
 module.exports = actions;
