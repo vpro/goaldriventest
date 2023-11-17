@@ -1,3 +1,6 @@
+// Copyright (c) Mathijn Elhorst.
+// Licensed under the MIT license.
+
 const fs = require('fs');
 const axios = require('axios');
 const puppeteer = require('puppeteer');
@@ -37,14 +40,19 @@ parser.add_argument('--playback', { help: 'playback the test run from the json f
 parser.add_argument('--store', { help: 'Save the test run to json file for use by playback' });
 parser.add_argument('--noheadless', { action: 'store_true', help: 'Don\'t use a headless browser' });
 parser.add_argument('-m', '--maxsteps', { default: MAX_STEPS, help: 'The maximum number of steps to take' });
+parser.add_argument('-e', '--emulate', { default: 'iPhone 13 Pro', help: 'Emulate device' });
+parser.add_argument('-l', '--list', { action: 'store_true', help: 'List possible devices' });
+parser.add_argument('-V', '--version', { help: "version number", action: "version", version: "v0.1.0" });
 
 const args = parser.parse_args();
 const startime = DateTime.now()
 
 let prompt = `
-You are going to test a website. You will be given a URL and a screenshot of the website with that URL.  
+You are going to test a website. You will be given a URL and a screenshot of the website.  
 You try to understand the screenshots content and layout. From that you determine what the next logical 
-action will be to reach the given goal below. Do not repeat steps, look into your last actions for that.
+action will be to reach the given goal below. 
+Look back through all previous actions (if any) to see what your intention was and what you expected to happen and follow up on your intentions. 
+Change tactics to reach your goal if necessary. But do not repeat yourself!
 
 Every time you receive a screenshot of the website you determine your next action. 
 You return a JSON structure that contains that action in the following form, all other fields are required:
@@ -52,6 +60,7 @@ You return a JSON structure that contains that action in the following form, all
 - "action": # The action you are going to take, see below for the structure.
 - "expectation": Your prediction of what will happen when the action is taken. You are going to check this in the next step!
 - "step": A number representing the order or sequence of the action in achieving the goal.
+- "url": The url of the screenshot you are looking at.
 - "goal": Restate the overarching goal you are trying to reach.
 - "achieved": A boolean (true or false) indicating if the goal has been achieved or not. If so, action can be empty as this run is finished.
 - "previousExpectation": the expectation of the previous step.
@@ -66,7 +75,10 @@ for (const action in actions) {
     prompt += actions[action].getPromptInfo() + '\n\n';
 }
 
-prompt += `If there is any cookiebar present, please click it away first.
+prompt += `
+Some things to take into consideration:
+- If there is any cookiebar present, click it away first.
+- Don't click on the search icon or search button to focus the input as it will initiate a search. Use the input field to focus first, then type your search query and finally click the search button.
 
 Please only output the JSON structure, nothing else.
 
@@ -108,6 +120,11 @@ async function get_screenshot (page, mark_clickable_objects = true)
 
 // Main function
 async function main() {
+    if (args.list) {
+        console.log('Possible devices to simulate:\n' + Object.keys(puppeteer.KnownDevices).join('\n'));
+        return;
+    }
+
     let browser;
     if (args.browser === 'chrome') {
         browser = await puppeteer.launch({ headless: (args.noheadless ? false : "new"), args: ['--no-sandbox'] });
@@ -127,7 +144,7 @@ async function main() {
     }
 
     const page = await browser.newPage();
-    await page.setViewport({width: 1024, height: 1366});
+    await page.emulate(puppeteer.KnownDevices[args.emulate]);
     const navigateResult = await page.goto(args.url);
     if (!navigateResult.ok()) {
         throw new Error('Could not navigate to URL');
@@ -154,7 +171,7 @@ async function main() {
 			content: [
 				{
 					type: 'text',
-					text: 'This is step ' + step + '. Continue with this image, what\'s your next action?'
+					text: 'This is step ' + step + '. Continue with this image, what\'s your next action? The url is ' + page.url()
 				},
 				{
 					type: 'image_url',
@@ -233,7 +250,7 @@ async function main() {
     }
 
     if (!achieved) {
-        console.log('Maximum number of steps (' + MAX_STEPS + ') reached');
+        console.log('Maximum number of steps (' + args.maxsteps + ') reached');
     }
     // Close browser
     await browser.close();
