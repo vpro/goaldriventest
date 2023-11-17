@@ -1,6 +1,13 @@
 window.elementInfo = getVisibleAndClickableElements ();
 //return JSON.stringify(elementInfo);
 
+/**
+ * This functions determines all visible and clickable elements on the page and 
+ * marks them with a number. It is needed to determine x,y positions of elements
+ * because the AI is currently not giving accurate x,y positions of elements.
+ * 
+ * @returns an array of objects with visible x,y,width and height of the element and the element itself
+ */
 function getVisibleAndClickableElements () { 
     // Collect all clickable elememts, also the ones in the shadowdoms
     const selector = 'a, button, use, select, input, [role="button"], [tabindex]:not([tabindex="-1"]';
@@ -9,7 +16,7 @@ function getVisibleAndClickableElements () {
     // get rid of cookie consent first
     const cookieConsent = document.getElementById("ccm_notification_host");
     if (cookieConsent && window.getComputedStyle(cookieConsent).visibility !== 'hidden' && cookieConsent.shadowRoot) {
-        //cookieConsent.shadowRoot.replaceChildren("");
+       // cookieConsent.shadowRoot.replaceChildren("");
     }
 
     // Maak een lijst van objecten met de coördinaten en het element, clear any old ones first if present 
@@ -53,7 +60,7 @@ function getVisibleAndClickableElements () {
             numberDiv.innerText = elementsCoordinates.length - 1;
             numberDiv.style.position = 'absolute';
             numberDiv.style.top = (rect.y + rect.height*0 - 5) + 'px';
-            numberDiv.style.left = (rect.x + rect.width / 8) + 'px';
+            numberDiv.style.left = (rect.x + rect.width / 20) + 'px';
             numberDiv.style.width = 30;
             numberDiv.style.height = 30;
             numberDiv.style.display = 'flex';
@@ -61,13 +68,29 @@ function getVisibleAndClickableElements () {
             numberDiv.style.alignItems = 'center';
             numberDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.85)';
             numberDiv.style.borderRadius = '100%';
-            numberDiv.style.fontSize = '16px';
+            numberDiv.style.fontSize = '14px';
             numberDiv.style.fontWeight = 'bold';
             numberDiv.style.color = 'black';
             numberDiv.style.zIndex = '99999999999';
             numberDiv.style.pointerEvents = 'none';
 
             attachElement.appendChild(numberDiv);
+
+/*            // Show the calculated visible rectangle of the element
+            const elementRectangle = document.createElement('div');
+            elementRectangle.style.position = 'absolute';
+            elementRectangle.style.top = rect.y + 'px';
+            elementRectangle.style.left = rect.x + 'px';
+            elementRectangle.style.width = rect.width + 'px';
+            elementRectangle.style.height = rect.height + 'px';
+            elementRectangle.style.display = 'flex';
+            elementRectangle.style.backgroundColor = 'rgba(255, 0, 0, 0.25)';
+            elementRectangle.style.borderRadius = '2px';
+            elementRectangle.style.zIndex = '99999999999';
+            elementRectangle.style.pointerEvents = 'none';
+            
+            attachElement.appendChild(elementRectangle);*/
+
         }
     });
     // console.log("Return the elementCoordinates", elementsCoordinates, elementsCoordinates.length);
@@ -115,8 +138,14 @@ function querySelectorDeep(selector, rootNode=document.body) {
     return elements;
 }
 
-
+/**
+ * Function that returns the element at the given x,y coordinates, also searches the shadow dom
+ * @param {*} x - x coordinate to search for
+ * @param {*} y - y coordinate to search for
+ * @returns element at the given x,y coordinates
+ */
 function elementFromPointDeep(x, y) {
+    let depth = 0;
     let element = document.elementFromPoint(x, y);
     while (element?.shadowRoot) {
         const inner = element.shadowRoot.elementFromPoint(x, y);
@@ -126,42 +155,11 @@ function elementFromPointDeep(x, y) {
     return element;
 }
 
-function isVisible(element) {
-    if (!(element instanceof Element)) throw Error('DomUtil: elem is not an element.');
-
-    // You would expect line below would suffice... not, we are going to do it the hard way
-    // return element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true });
-    
-    const style = getComputedStyle(element);
-    if (style.display === 'none' || style.visibility !== 'visible') return false;
-
-    const rect = element.getBoundingClientRect();
-    if (element.offsetWidth + element.offsetHeight + rect.height + rect.width === 0) {
-        return false;
-    }
-
-    // Check if the element is completely obscured by others
-    const points = [
-        { x: rect.left, y: rect.top },
-        { x: rect.left + rect.width / 2, y: rect.top },
-        { x: rect.right, y: rect.top },
-        { x: rect.left, y: rect.top + rect.height / 2 },
-        { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
-        { x: rect.right, y: rect.top + rect.height / 2 },
-        { x: rect.left, y: rect.bottom },
-        { x: rect.left + rect.width / 2, y: rect.bottom },
-        { x: rect.right, y: rect.bottom }
-    ];
-    
-    for (const point of points) {
-        const topElement = elementFromPointDeep(point.x, point.y);
-        if (element.contains(topElement) || topElement === element) {
-            return true; // At least one point of the element is unobscured by another element
-        }
-    }
-    return false; // No points are obscured
-}
-
+/**
+ * Function determines the visible rectangle of an element that's not obscured by other elements
+ * @param {*} element 
+ * @returns the visible rectangle of an element that's not obscured by other elements { x, y, width, height }
+ */
 function getVisibleRect(element) {
     
     if (!(element instanceof Element)) throw Error('DomUtil: elem is not an element.');
@@ -175,19 +173,6 @@ function getVisibleRect(element) {
     if (element.offsetWidth + element.offsetHeight + boundingRect.height + boundingRect.width === 0) {
         return visibleRect;
     }
-
-    // Check if the element is completely obscured by others
-    let points = [
-        { x: boundingRect.left, y: boundingRect.top },
-        { x: boundingRect.left + boundingRect.width / 2, y: boundingRect.top },
-        { x: boundingRect.right, y: boundingRect.top },
-        { x: boundingRect.left, y: boundingRect.top + boundingRect.height / 2 },
-        { x: boundingRect.left + boundingRect.width / 2, y: boundingRect.top + boundingRect.height / 2 },
-        { x: boundingRect.right, y: boundingRect.top + boundingRect.height / 2 },
-        { x: boundingRect.left, y: boundingRect.bottom },
-        { x: boundingRect.left + boundingRect.width / 2, y: boundingRect.bottom },
-        { x: boundingRect.right, y: boundingRect.bottom }
-    ];
     
     let isVisible = false;
     let minX = Number.MAX_SAFE_INTEGER;
@@ -195,14 +180,19 @@ function getVisibleRect(element) {
     let maxX = Number.MIN_SAFE_INTEGER;
     let maxY = Number.MIN_SAFE_INTEGER;
 
-    for (const point of points) {
-        const topElement = elementFromPointDeep(point.x, point.y);
-        if (element.contains(topElement) || topElement === element) {
-            minX = Math.min(minX, point.x);
-            minY = Math.min(minY, point.y);
-            maxX = Math.max(maxX, point.x);
-            maxY = Math.max(maxY, point.y);
-            isVisible = true;
+    const divider = 10;
+    for (x = 0; x < divider; ++x) {
+        for (y = 0; y < divider; ++y) {
+            const point = { x: boundingRect.left + boundingRect.width * x / divider, y: boundingRect.top + boundingRect.height * y / divider };
+            const topElement = elementFromPointDeep(point.x, point.y);
+
+            if (topElement && (isDeepDescendant (element, topElement) || topElement === element)) {
+                minX = Math.min(minX, point.x);
+                minY = Math.min(minY, point.y);
+                maxX = Math.max(maxX, point.x);
+                maxY = Math.max(maxY, point.y);
+                isVisible = true;
+            }
         }
     }
 
@@ -227,29 +217,33 @@ function doRectsOverlap(rect1, rect2) {
 }
 
 function clipRect(rectToClip, clippingRect) {
-    // Ensure rectB's left side is within rectA
-    rectToClip.x = Math.max(rectToClip.x, clippingRect.x);
-
-    // Ensure rectB's top side is within rectA
-    rectToClip.y = Math.max(rectToClip.y, clippingRect.y);
-
-    // Ensure rectB's right side is within rectA
-    rectToClip.width = Math.min(rectToClip.x + rectToClip.width, clippingRect.x + clippingRect.width) - rectToClip.x;
-
-    // Ensure rectB's bottom side is within rectA
-    rectToClip.height = Math.min(rectToClip.y + rectToClip.height, clippingRect.y + clippingRect.height) - rectToClip.y;
+    let result = { x: 0, y: 0, width: 0, height: 0 };
+    result.x = Math.max(rectToClip.x, clippingRect.x);
+    result.y = Math.max(rectToClip.y, clippingRect.y);
+    result.width = Math.min(rectToClip.x + rectToClip.width, clippingRect.x + clippingRect.width) - result.x;
+    result.height = Math.min(rectToClip.y + rectToClip.height, clippingRect.y + clippingRect.height) - result.y;
 
     // Ensure width and height are not negative after clipping
-    rectToClip.width = Math.max(rectToClip.width, 0);
-    rectToClip.height = Math.max(rectToClip.height, 0);
+    result.width = Math.max(result.width, 0);
+    result.height = Math.max(result.height, 0);
 
-    return rectToClip;
+    return result;
 }
 
-function markClickableElement(elementIndex) {
-    const attachElement = document.getElementById("test_all_numbers");
-    if (elementIndex >= 0 && elementIndex < attachElement.length) {
-        attachElement.childNodes(elementIndex).style.backgroundColor = 'rgba(255, 0, 0, 0.85)';
-        clickableElements[elementIndex].element.style.backgroundColor = 'rgba(255, 0, 0, 0.85)';
+/**
+ * Function determines if an element is a deep descendant of another element (also in shadow doms)
+ * @param {*} parent
+ * @param {*} child
+ * @returns true if the child is a deep descendant of the parent, false otherwise
+ */
+
+function isDeepDescendant(parent, child) {
+    let node = child.parentNode ? child.parentNode : child.host;
+    while (node !== null && node !== undefined) {
+        if (node === parent || node.shadowRoot == parent) {
+            return true;
+        }
+        node = node.parentNode ? node.parentNode : node.host;
     }
+    return false;
 }
