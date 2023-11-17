@@ -2,12 +2,11 @@ const actions = require('./actions');
 const { DateTime } = require('luxon');
 const fs = require('fs');
 
-// Todo: make the arguments for this function more generic
-
 function contentToJson(content) {
     return JSON.parse(content.replace('```json\n', '').replace('\n```', ''))
 }
 
+// Todo: make the arguments for this function a little less ugly
 function create_report (filename, prompt_messages, screenshots, actionResults, args, startime) 
 {
 //    if (screenshots.length !== actionResults.length + 1) {
@@ -44,7 +43,7 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
                 margin: 10px;
                 border-radius: 5px;
                 box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                width: 60%;
+                width: 100%;
             }
             .intro h1 {
                 color: #333;
@@ -54,8 +53,8 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
 				cursor: pointer;
 			}
 			img {
-				max-width: 100%;
-			}
+                max-width: 100%;
+            }
 			.fullscreen {
 				position: fixed;
 				top: 0;
@@ -91,7 +90,7 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
                 margin: 10px;
                 border-radius: 5px;
                 box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                width: 60%;
+                width: 100%;
             }
             .action-card h2 {
                 color: #333;
@@ -189,13 +188,15 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
     html_content += `
     <div class="step">
         <div class="intro">
-            <h1>Goal: ${args.goal}</h1>
-            <p>URL: ${args.url}</p>
+            <h1>Goal:</h1>
+            <p><strong>${args.goal}</strong></p>
+            <p>URL: <a href="${args.url}">${args.url}</a></p>
             <p>Start time: ${startime.toFormat('yyyy-LL-dd HH:mm:ss')}</p>
             <p>End time: ${DateTime.now().toFormat('yyyy-LL-dd HH:mm:ss')}</p>
             <p>Number of steps: ${screenshots.length - 1}</p>
             <p>Goal achieved: ${prompt_messages.length > 0 && contentToJson(prompt_messages[prompt_messages.length - 1].content).achieved ? 'Yes' : 'No'}</p>
             <p>Browser: ${args.browser}</p>
+            <p>Device: ${args.emulate}</p>
         </div>
         <div class="image" onclick="toggleFullscreen(this)">
             <img src="data:image/png;base64,${screenshots[0]}" alt="Starting screenshot" />
@@ -237,13 +238,14 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
                     ${action_Html}
                     <p><b>Description:</b> <span id="description">${json_data.description}</span></p>`;
 
-                    
+
             if (next_json_data) {
                 if (next_json_data.previousExpectation != json_data.expectation) {
                     console.log("Warning: previousExpectation is not the same as the current expectation");
                 }
                 html_content +=
                     `<p/>
+                    <p><b>Url:</b> <span id="url"><a href="${next_json_data.url}">${next_json_data.url}</a></span></p>
                     <p><b>Expectation:</b> <span id="${next_json_data.expectationSatisfied ? "expectation-success" : "expectation-failed"}">${next_json_data.previousExpectation}</span></p>
                     <div class="frustration-level">
                         <b>Frustration Level:</b>
