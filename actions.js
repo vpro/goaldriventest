@@ -247,19 +247,7 @@ class InputAction extends Action {
             throw new Error('No text given');
         }
 
- //       const element = await this.getElementInfo(page, actionPayload);
- //       if (!element) {
- //           throw new Error('Invalid element number');
- //       }
-
-   //     console.log("InputAction Element", element);
-
-//        if (element.tagName === 'INPUT') {
-  //          element.value = actionPayload.text;
-    //    } else {
-     //       await element.focus();
             await page.keyboard.type(actionPayload.text);
-       // }
 
         return `Add text ${actionPayload.text}`; 
     }
