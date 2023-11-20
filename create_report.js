@@ -18,7 +18,7 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>JSON Presentation</title>
+		<title>Goaldriventest report</title>
 		<style>
 			.container {
 				display: flex;
@@ -80,6 +80,7 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
 				overflow: auto;
 				max-height: 80vh;
 				width: 50%;
+                display: none;  // Debug only
 			}
 			.json pre {
 				white-space: pre-wrap;
@@ -270,7 +271,7 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
                 </div>
             </div>`;
             
-            // Debug only
+            // Debug only, marked with display: none in the style
 			html_content += `<div class="json"><pre>{${JSON.stringify(json_data, null, 4)}}</pre></div>`;
 
 			step += 1
