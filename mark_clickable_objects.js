@@ -10,21 +10,21 @@ window.elementInfo = getVisibleAndClickableElements ();
  */
 function getVisibleAndClickableElements () { 
     // Collect all clickable elememts, also the ones in the shadowdoms
-    const selector = 'a, button, use, select, input, [role="button"], [tabindex]:not([tabindex="-1"]';
+    const selector = 'a, button, use, select, input, i, [role="button"], [tabindex]:not([tabindex="-1"]';
     const clickableElements = querySelectorDeep(selector);  
 
     // get rid of cookie consent first
     const cookieConsent = document.getElementById("ccm_notification_host");
     if (cookieConsent && window.getComputedStyle(cookieConsent).visibility !== 'hidden' && cookieConsent.shadowRoot) {
-       // cookieConsent.shadowRoot.replaceChildren("");
+        cookieConsent.shadowRoot.replaceChildren("");
     }
 
     // Maak een lijst van objecten met de coördinaten en het element, clear any old ones first if present 
     const elementsCoordinates = [];
-    let attachElement = document.getElementById("test_all_numbers");
+    let attachElement = document.getElementById("goal_driven_test_all_numbers");
     if (!attachElement) {
         attachElement = document.body.appendChild(document.createElement('div'));
-        attachElement.id = "test_all_numbers";
+        attachElement.id = "goal_driven_test_all_numbers";
         attachElement.style.position = 'fixed';
         attachElement.style.left = 0; 
         attachElement.style.top = 0; 
@@ -40,7 +40,25 @@ function getVisibleAndClickableElements () {
         width: window.innerWidth,
         height: window.innerHeight
     }
- 
+    
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = `
+        .goal_driven_test_all_numbers_number {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 0, 1);
+            border-radius: 100%;
+            font-size: 16px;
+            font-weight: bold;
+            color: black;
+            z-index: 99999999999;
+            pointer-events: none;
+        }
+    `;
+    attachElement.appendChild(styleElement);
+
     clickableElements.forEach((element, index) => {
         let rect = clipRect (getVisibleRect (element), screenRect);
         // Check if the element is visible and not behind something else
@@ -57,23 +75,11 @@ function getVisibleAndClickableElements () {
 
             // Create a div with the number of the element
             const numberDiv = document.createElement('div');
+            numberDiv.className = 'goal_driven_test_all_numbers_number';
             numberDiv.innerText = elementsCoordinates.length - 1;
-            numberDiv.style.position = 'absolute';
             numberDiv.style.top = (rect.y + rect.height*0 - 5) + 'px';
-            numberDiv.style.left = (rect.x + rect.width / 20) + 'px';
-            numberDiv.style.width = 30;
-            numberDiv.style.height = 30;
-            numberDiv.style.display = 'flex';
-            numberDiv.style.justifyContent = 'center';
-            numberDiv.style.alignItems = 'center';
-            numberDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.85)';
-            numberDiv.style.borderRadius = '100%';
-            numberDiv.style.fontSize = '14px';
-            numberDiv.style.fontWeight = 'bold';
-            numberDiv.style.color = 'black';
-            numberDiv.style.zIndex = '99999999999';
-            numberDiv.style.pointerEvents = 'none';
-
+            numberDiv.style.left = (rect.x + rect.width / 2) + 'px';
+ 
             attachElement.appendChild(numberDiv);
 
 /*            // Show the calculated visible rectangle of the element
