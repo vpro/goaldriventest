@@ -275,7 +275,7 @@ class InputAction extends Action {
             throw new Error('Action type does not match');
         }
         return `
-            <span id="action-icon">↔️ ${actionPayload.actionType} ${actionPayload.direction}</span>`
+            <span id="action-icon">🔠 ${actionPayload.actionType}</span>`
     }    
 }
 
