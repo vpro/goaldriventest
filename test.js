@@ -8,6 +8,7 @@ const { ArgumentParser } = require('argparse');
 const { DateTime } = require('luxon');
 const OpenAI = require('openai');
 const actions = require('./actions');
+const { installMouseHelper } = require('./mouse_helper');
 const { create_report } = require('./create_report');
 
 // Set up OpenAI
@@ -56,7 +57,7 @@ Change tactics to reach your goal if necessary. But do not repeat yourself!
 
 Every time you receive a screenshot of the website you determine your next action. 
 You return a JSON structure that contains that action in the following form, all other fields are required:
-- "description": A brief description of the action you are going to perform.
+- "description": A brief description of the action you are going to perform. Use enough detail to use it to have a history of what you did to use in next steps.
 - "action": # The action you are going to take, see below for the structure.
 - "expectation": Your prediction of what will happen when the action is taken. You are going to check this in the next step!
 - "step": A number representing the order or sequence of the action in achieving the goal.
@@ -78,7 +79,7 @@ for (const action in actions) {
 prompt += `
 Some things to take into consideration:
 - If there is any cookiebar present, click it away first.
-- Don't click on the search icon or search button to focus the input as it will initiate a search. Use the input field to focus first, then type your search query and finally click the search button.
+- To search something, start with a click on the text input field on the left of the search magnify glass icon or a search button. This will focus the input and display a (difficult to see) vertical cursor bar. Check for the latter in the next step and proceed with typing your search term. You can add a \n to the search string to immediately search, or you can click the search button or icon to perform the search in the next step. 
 
 Please only output the JSON structure, nothing else.
 
@@ -113,6 +114,9 @@ async function get_screenshot (page, mark_clickable_objects = true)
         const scriptContents = fs.readFileSync('mark_clickable_objects.js', 'utf8');
         await page.evaluate(scriptContents);
     }
+
+    // make the mouse visible
+    installMouseHelper(page);
 
     // Make a screenshot
     return await page.screenshot({ type: 'jpeg', encoding: "base64" });
