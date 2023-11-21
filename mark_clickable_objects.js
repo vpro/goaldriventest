@@ -48,9 +48,13 @@ function getVisibleAndClickableElements () {
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: rgba(255, 255, 0, 1);
-            border-radius: 100%;
-            font-size: 16px;
+            background-color: rgba(255, 255, 0, 0.9);
+            border-radius: 50%;
+            // border: 1px solid black; 
+            box-shadow: 0 0 0 1px white;
+            border-radius: 50%;   
+            padding: 2px;
+            font-size: 13px;
             font-weight: bold;
             color: black;
             z-index: 99999999999;
@@ -78,11 +82,11 @@ function getVisibleAndClickableElements () {
             numberDiv.className = 'goal_driven_test_all_numbers_number';
             numberDiv.innerText = elementsCoordinates.length - 1;
             numberDiv.style.top = (rect.y + rect.height*0 - 5) + 'px';
-            numberDiv.style.left = (rect.x + rect.width / 2) + 'px';
+            numberDiv.style.left = (rect.x + rect.width*0.4) + 'px';
  
             attachElement.appendChild(numberDiv);
 
-/*            // Show the calculated visible rectangle of the element
+ /*           // Show the calculated visible rectangle of the element
             const elementRectangle = document.createElement('div');
             elementRectangle.style.position = 'absolute';
             elementRectangle.style.top = rect.y + 'px';

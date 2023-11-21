@@ -4,6 +4,7 @@
 const fs = require('fs');
 const axios = require('axios');
 const puppeteer = require('puppeteer');
+const sharp = require('sharp');
 const { ArgumentParser } = require('argparse');
 const { DateTime } = require('luxon');
 const OpenAI = require('openai');
@@ -27,6 +28,7 @@ const openaiModel = 'gpt-4-vision-preview';
 const MAX_STEPS = 5;
 const USE_ELEMENT_NUMBERS_FOR_CLICK = true;
 const BROWSER_DELAY_MSECS = 4000; // Time in milliseconds
+const SCREENSHOT_MAXSIZE = { width: 512, height: 512 };
 
 // Prompt
 
@@ -119,7 +121,16 @@ async function get_screenshot (page, mark_clickable_objects = true)
     installMouseHelper(page);
 
     // Make a screenshot
-    return await page.screenshot({ type: 'jpeg', encoding: "base64" });
+    const screenshotBinary = await page.screenshot({ type: 'jpeg', encoding: "binary" });
+    if (screenshotBinary === undefined) {
+        throw new Error('Could not create screenshot');
+    }
+
+    const screenshotBuf = await sharp(screenshotBinary)
+        .resize(SCREENSHOT_MAXSIZE.width, SCREENSHOT_MAXSIZE.height, { fit: 'inside' })
+        .jpeg({ quality: 100 })
+        .toBuffer ();
+    return screenshotBuf.toString('base64');
 }
 
 // Main function
@@ -207,7 +218,7 @@ async function main() {
         else {
             response = await openai.chat.completions.create({
                 messages: temp_prompt_messages,
-                max_tokens: 300,
+                max_tokens: 350,
                 model: openaiModel,
             });    
         }
@@ -216,6 +227,7 @@ async function main() {
             throw new Error('No response from OpenAI');
         }
         if (response.choices[0].finish_details.type !== 'stop') {
+            console.log("Failure: " + response);
             throw new Error('OpenAI did not finish but gave as failure reason: ' + response.choices[0].finish_details.type);
         }
         prompt_messages.push({ role: 'user', content: 'Continue with this image, what\'s your next action?' });

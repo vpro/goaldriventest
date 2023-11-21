@@ -68,8 +68,9 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
 				z-index: 9999;
 			}
 			.fullscreen img {
-				max-width: 100%;
-				max-height: 100%;
+				width: 100%;
+				height: 100%;
+                object-fit: contain;
 			}
 			.json {
 				margin: 10px;
