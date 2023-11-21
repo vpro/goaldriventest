@@ -96,7 +96,7 @@ class ClickAction extends Action {
     getPromptInfo() {
         return `To click on a element use the following action structure:
         1. "actionType": "click" (required)
-        2. "elementNumber": The number of the element that is to be acted upon. The number is determined by the number in the yellow box around the element in the screenshot.  (required)`;
+        2. "elementNumber": The number of the element that is to be acted upon. The number can be found in the yellow box just above that element.  (required)`;
     }
 
     getDescriptionHTML(actionPayload) {
@@ -179,7 +179,8 @@ class ScrollAction extends Action {
         1. "actionType": "scroll" (required)
         2. "elementNumber": The number of the element or -1 to scroll the page (required)
         3. "direction": either "up", "down", "left", "right" (required)
-        4. "distance": either "little", "medium" or "far" (required)`;
+        4. "distance": either "little" (25% page), "medium" (50% page)  or "far" (100% page) (required)
+        To determine if the distance should be increased or decreased in possible next steps write something in the description to make that possible.`;
     }
 
     getDescriptionHTML(actionPayload) {
