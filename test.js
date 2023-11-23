@@ -43,7 +43,7 @@ parser.add_argument('--playback', { help: 'playback the test run from the json f
 parser.add_argument('--store', { help: 'Save the test run to json file for use by playback' });
 parser.add_argument('--noheadless', { action: 'store_true', help: 'Don\'t use a headless browser' });
 parser.add_argument('-m', '--maxsteps', { default: MAX_STEPS, help: 'The maximum number of steps to take' });
-parser.add_argument('-e', '--emulate', { default: 'iPhone 13 Pro', help: 'Emulate device' });
+parser.add_argument('-e', '--emulate', { default: 'iPad Mini landscape', help: 'Emulate device' });
 parser.add_argument('-l', '--list', { action: 'store_true', help: 'List possible devices' });
 parser.add_argument('-V', '--version', { help: "version number", action: "version", version: "v0.1.0" });
 
