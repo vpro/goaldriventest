@@ -35,11 +35,11 @@ Before you can harness the power of GoalDrivenTest, you need to get it up and ru
    ```
 2. Navigate to the cloned directory:
    ```
-   cd GoalDrivenTest
+   cd goaldriventest
    ```
 3. Install the necessary dependencies:
    ```
-   npm install axios puppeteer sharp argparse luxon openai 
+   npm install 
    ```
 
 After a successful installation, you’re ready to set your goals and test away!
