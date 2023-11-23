@@ -46,7 +46,8 @@ class Action {
             return undefined;
         }
 
-        const elements = await page.evaluate(() => window["elementInfo"]);
+        const elements = JSON.parse (await page.evaluate(() => { return JSON.stringify(window["goal_driven_test_element_info"]) }));
+        console.log("Elements", elements);
         if (elements === undefined || actionPayload.elementNumber < 0 || actionPayload.elementNumber >= elements.length) {
             return undefined;
         }
@@ -61,7 +62,6 @@ class Action {
      */
     async getXY(page, actionPayload) {
         const element = await this.getElementInfo(page, actionPayload);
-
         if (element === undefined) {
             // fallback to x and y
             if (actionPayload.x === undefined || actionPayload.y === undefined) { 
@@ -127,14 +127,12 @@ class ScrollAction extends Action {
             });
 
             xy = { x: size.width / 2, y: size.height / 2 };
-            console.log("Scrolling to middle of page", xy);
         }
         await page.mouse.move(xy.x, xy.y);
 
         let distanceX, distanceY;
         if ("distance" in actionPayload) {
             const viewport = await page.viewport();
-            console.log("Viewport ", viewport);
             if (actionPayload["distance"] == "little") {
                 distanceX = viewport.width / 4;
                 distanceY = viewport.height / 4;

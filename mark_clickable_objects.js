@@ -1,4 +1,4 @@
-window.elementInfo = getVisibleAndClickableElements ();
+window.goal_driven_test_element_info = getVisibleAndClickableElements ();
 //return JSON.stringify(elementInfo);
 
 /**
@@ -16,7 +16,7 @@ function getVisibleAndClickableElements () {
     // get rid of cookie consent first
     const cookieConsent = document.getElementById("ccm_notification_host");
     if (cookieConsent && window.getComputedStyle(cookieConsent).visibility !== 'hidden' && cookieConsent.shadowRoot) {
-        cookieConsent.shadowRoot.replaceChildren("");
+       //cookieConsent.shadowRoot.replaceChildren("");
     }
 
     // Maak een lijst van objecten met de coördinaten en het element, clear any old ones first if present 
@@ -67,10 +67,7 @@ function getVisibleAndClickableElements () {
         let rect = clipRect (getVisibleRect (element), screenRect);
         // Check if the element is visible and not behind something else
         if (rect.width > 0 && rect.height > 0) {
-            // console.log(index, rect, elementsCoordinates.length, element);
-
             elementsCoordinates.push({
-                element: element,
                 x: rect.x,
                 y: rect.y,
                 width: rect.width,
@@ -86,7 +83,7 @@ function getVisibleAndClickableElements () {
  
             attachElement.appendChild(numberDiv);
 
- /*           // Show the calculated visible rectangle of the element
+            /* Show the calculated visible rectangle of the element
             const elementRectangle = document.createElement('div');
             elementRectangle.style.position = 'absolute';
             elementRectangle.style.top = rect.y + 'px';
@@ -99,12 +96,11 @@ function getVisibleAndClickableElements () {
             elementRectangle.style.zIndex = '99999999999';
             elementRectangle.style.pointerEvents = 'none';
             
-            attachElement.appendChild(elementRectangle);*/
-
+            attachElement.appendChild(elementRectangle);
+            */
         }
     });
-    // console.log("Return the elementCoordinates", elementsCoordinates, elementsCoordinates.length);
-    return elementsCoordinates;
+     return elementsCoordinates;
 }
 
 // query elements even deeply within shadow doms. e.g.:
