@@ -1,6 +1,6 @@
-**GoalQuestAI** 🎯
+**GoalDrivenTest** 🎯
 
-GoalQuestAI is an innovative tool designed to assess and test the user experience of a website. Instead of traditional manual testing or generic automated processes, it uses artificial intelligence to navigate and evaluate your website based on specific goals you set.
+GoalDrivenTest is an innovative Proof of Concept tool designed to assess and test the user experience of a website. Instead of traditional manual testing or generic automated processes, it uses artificial intelligence to navigate and evaluate your website based on specific goals you set.
 
 **Key Features and Benefits:**
 
@@ -8,11 +8,11 @@ GoalQuestAI is an innovative tool designed to assess and test the user experienc
   
 2. **Feedback at Every Step:** As the AI navigates, it provides valuable insights, detailing its expectations and pointing out potential areas that could frustrate users.
    
-3. **Simulated User Interactions:** One of the standout features of GoalQuestAI is its ability to mimic various target audience behaviors. This lets website developers and designers gain insights into how different types of users might interact with and experience their website.
+3. **Simulated User Interactions:** One of the standout features of GoalDrivenTest is its ability to mimic various target audience behaviors. This lets website developers and designers gain insights into how different types of users might interact with and experience their website.
    
 4. **Pre-Launch Insight:** Before making a website live, developers can get a sneak peek into the journey of potential visitors. This proactive approach helps in identifying and rectifying issues, ensuring a smoother user experience post-launch.
 
-In essence, GoalQuestAI offers an intuitive, insightful, and futuristic approach to website testing, making the process more dynamic and aligned with real-world user behaviors and expectations.
+In essence, GoalDrivenTest offers an intuitive, insightful, and futuristic approach to website testing, making the process more dynamic and aligned with real-world user behaviors and expectations.
 
 ## Table of Contents
 - [Installation](#installation)
@@ -22,71 +22,65 @@ In essence, GoalQuestAI offers an intuitive, insightful, and futuristic approach
 
 ## Installation
 
-Before you can harness the power of GoalQuestAI, you need to get it up and running on your system.
+Before you can harness the power of GoalDrivenTest, you need to get it up and running on your system.
 
 **Prerequisites:**
-- Python
-- Python packages: 
+- nodejs
+- npm
 
 **Step-by-Step Installation:**
 1. Clone the repository to your local machine:
    ```
-   git clone https://github.com/yourusername/goalquestai.git
+   git clone https://github.com/mathijne/goaldriventest.git
    ```
 2. Navigate to the cloned directory:
    ```
-   cd goalquestai
+   cd GoalDrivenTest
    ```
 3. Install the necessary dependencies:
    ```
-   pip install selenium opi requests
+   npm install axios puppeteer sharp argparse luxon openai 
    ```
 
 After a successful installation, you’re ready to set your goals and test away!
 
 ## Usage
 
-GoalQuestAI operates from the command line and is designed to be user-friendly.
+GoalDrivenTest operates from the command line and is designed to be user-friendly.
 
 **Basic Command Structure:**
 ```
-goalquestai --goal "Your Testing Goal" --url "https://yourwebsite.com"
+node goaldriventest.js https://yourwebsite.com "state your goal to test the site here" report.html
 ```
 
 **Examples:**
-- To test user registration:
+- To show all commandline options:
   ```
-  goalquestai --goal "register a new user" --url "https://yourwebsite.com/signup"
+  node goaldriventest.js --help
   ```
-- To test the checkout process:
+- To find the lastest Harry Potter movie and follow the process in a browser window, limit the process to a maximum of 15 steps and use the chrome browser:
   ```
-  goalquestai --goal "complete a checkout" --url "https://yourwebsite.com/checkout"
+  node goaldriventest.js --noheadless -m 15 -b chrome https://www.vprogids.nl/cinema "find the movie overview page of the latest 'harry potter' movie" report.html
   ```
 
 Replace the goal and URL with your specific testing parameters.
 
 ## Known Issues
 
-For a seamless experience with GoalQuestAI, please be aware of the following known issues:
+Please be aware of the following known issues:
 
-- **Issue #1:** Description and temporary workaround if applicable.
-- **Issue #2:** Description and next steps or planned resolution.
+- **Issue #1:** This is a Proof of Concept (PoC), meaning that error handling is not well worked out and code needs to be seriously refactored in many places. But to my knowledge it is working quiet well in the happy flow. Feel free to improve on it and give feedback. 
+- **Issue #2:** OpenAI cannot give accurate enough coordinates of the HTML elements. To circumvent this limitation, clickable elements are marked with a number before the screenshot is taken. There are situations that this blocks the interface too much, making it difficult for the AI to interpret. Uploading two versions of a screenshot, one with and without numbers, is too expensive. 
 
-We are actively working to resolve these issues. Stay updated by checking the [Issues](https://github.com/yourusername/goalquestai/issues) page of our repository.
+Stay updated by checking the [Issues](https://github.com/Mathijne/goaldriventest/issues) page of our repository.
 
 ## Providing Feedback
 
-Your insights and experiences are invaluable to the growth of GoalQuestAI. If you encounter any bugs, have suggestions for new features, or have any sort of feedback, please follow these steps:
+I'm very curious to your insights and feedback.  If you encounter any bugs, have suggestions for new features, or have any sort of feedback, please follow these steps:
 
-1. Visit the [Issues](https://github.com/yourusername/goalquestai/issues) page of our GitHub repository.
+1. Visit the [Issues](https://github.com/Mathijne/goaldriventest/issues) page of our GitHub repository.
 2. Create a new issue, providing a clear and concise title and description.
 3. If reporting a bug, include steps to reproduce it, and any screenshots if possible.
 4. Submit your issue. We’ll review it and get back to you as soon as possible.
 
----
-
-We look forward to your contributions and thank you for choosing GoalQuestAI to enhance your website’s user experience testing.
-
---- 
-
-This structure ensures that users have a clear guide on getting started with your tool while also understanding where to report any issues they encounter. Adjust the actual links and commands to fit your tool's requirements.
+And maybe, maybe I will follow up :)
