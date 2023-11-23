@@ -103,8 +103,7 @@ function getVisibleAndClickableElements () {
      return elementsCoordinates;
 }
 
-// query elements even deeply within shadow doms. e.g.:
-// ts-app::shadow paper-textarea::shadow paper-input-container
+// query elements even deeply within shadow doms
 function querySelectorDeep(selector, rootNode=document.body) {
     const elements = [];
     

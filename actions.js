@@ -47,7 +47,6 @@ class Action {
         }
 
         const elements = JSON.parse (await page.evaluate(() => { return JSON.stringify(window["goal_driven_test_element_info"]) }));
-        console.log("Elements", elements);
         if (elements === undefined || actionPayload.elementNumber < 0 || actionPayload.elementNumber >= elements.length) {
             return undefined;
         }
