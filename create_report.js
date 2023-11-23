@@ -9,10 +9,6 @@ function contentToJson(content) {
 // Todo: make the arguments for this function a little less ugly
 function create_report (filename, prompt_messages, screenshots, actionResults, args, startime) 
 {
-//    if (screenshots.length !== actionResults.length + 1) {
-//        throw new Error('Number of screenshots and action results do not match');
-//    }
-
     let html_content = `<!DOCTYPE html>
 	<html lang="en">
 	<head>
