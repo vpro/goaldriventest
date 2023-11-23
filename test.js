@@ -28,7 +28,7 @@ const openaiModel = 'gpt-4-vision-preview';
 const MAX_STEPS = 5;
 const USE_ELEMENT_NUMBERS_FOR_CLICK = true;
 const BROWSER_DELAY_MSECS = 4000; // Time in milliseconds
-const SCREENSHOT_MAXSIZE = { width: 512, height: 512 };
+const SCREENSHOT_MAXSIZE = { width: 1024, height: 1024 };
 
 // Prompt
 
@@ -82,6 +82,7 @@ prompt += `
 Some things to take into consideration:
 - If there is any cookiebar present, click it away first.
 - To search something, start with a click on the text input field on the left of the search magnify glass icon or a search button. This will focus the input and display a (difficult to see) vertical cursor bar. Check for the latter in the next step and proceed with typing your search term. You can add a \n to the search string to immediately search, or you can click the search button or icon to perform the search in the next step. 
+- Be very carefull to use elementNumbers only from the current screenshot, not from any previous action as numbers will change between screenshots!
 
 Please only output the JSON structure, nothing else.
 
@@ -160,6 +161,14 @@ async function main() {
 
     const page = await browser.newPage();
     await page.emulate(puppeteer.KnownDevices[args.emulate]);
+    /* add for sites that block headless browsers */
+    await page.setExtraHTTPHeaders({ 
+		'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36', 
+		'upgrade-insecure-requests': '1', 
+		'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8', 
+		'accept-encoding': 'gzip, deflate, br', 
+		'accept-language': 'en-US,en;q=0.9,en;q=0.8' 
+	}); 
     const navigateResult = await page.goto(args.url);
     if (!navigateResult.ok()) {
         throw new Error('Could not navigate to URL');
@@ -248,7 +257,9 @@ async function main() {
             if (!action) {
                 throw new Error('Action not recognized');
             }
-            actionResults.push(await action.perform(page, jsonObject.action));
+            const actionResult = await action.perform(page, jsonObject.action);
+            actionResults.push(actionResult);
+            console.log("Taking action: " + actionResult);
             await new Promise(resolve => setTimeout(resolve, BROWSER_DELAY_MSECS));
         }
         else {
