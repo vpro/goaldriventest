@@ -86,7 +86,10 @@ for (const action in actions) {
 prompt += `
 Some things to take into consideration:
 - If there is any cookiebar present, click it away first.
-- To search something, start with a click on the text input field on the left of the search magnify glass icon or a search button. This will focus the input and display a (difficult to see) vertical cursor bar. Check for the latter in the next step and proceed with typing your search term. You can add a \n to the search string to immediately search, or you can click the search button or icon to perform the search in the next step. 
+- If you need to search and both a text input field and search icon or search button are next to eachother, start with a click on the text input field.
+- If only a search icon or search button is present, click it first. 
+- A text input field is only focussed and ready for text input when there is a (difficult to see) vertical cursor bar present. 
+- You can add a \n to a single line input text string to to simulate a press on the enter key.
 - Be very carefull to use elementNumbers only from the current screenshot, not from any previous action as numbers will change between screenshots!
 
 Please only output the JSON structure, nothing else.
@@ -190,9 +193,9 @@ async function main() {
         throw new Error('Could not navigate to URL');
     }
 
-    console.log('Starting test run');
-    console.log('Goal: ' + args.goal);
+    console.log('Starting test run\n');
     console.log('Starting URL: ' + args.url);
+    console.log(`Goal: "${args.goal}"`);
 
     const screenshots = [];
     const actionResults = [];

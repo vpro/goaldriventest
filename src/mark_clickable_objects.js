@@ -91,7 +91,7 @@ function getVisibleAndClickableElements () {
  
             attachElement.appendChild(numberDiv);
 
-            // Show the calculated visible rectangle of the element
+            /* Debug: Show the calculated visible rectangle of the element
             const elementRectangle = document.createElement('div');
             elementRectangle.style.position = 'absolute';
             elementRectangle.style.top = rect.y + 'px';
@@ -104,7 +104,7 @@ function getVisibleAndClickableElements () {
             elementRectangle.style.zIndex = '99999999999';
             elementRectangle.style.pointerEvents = 'none';
             
-            attachElement.appendChild(elementRectangle);
+            attachElement.appendChild(elementRectangle);*/
             
         }
     });
