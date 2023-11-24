@@ -1,5 +1,9 @@
+'use strict';
+
 // This injects a box into the page that moves with the mouse;
 // Useful for debugging
+// See https://gist.github.com/aslushnikov/94108a4094532c7752135c42e12a00eb
+
 async function installMouseHelper(page) {
   await page.evaluateOnNewDocument(() => {
     // Install mouse helper only for top-level frame.

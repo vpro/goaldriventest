@@ -1,3 +1,5 @@
+'use strict';
+
 const actions = require('./actions');
 const { DateTime } = require('luxon');
 const fs = require('fs');

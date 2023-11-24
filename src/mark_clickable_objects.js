@@ -1,5 +1,6 @@
+'use strict';
+
 window.goal_driven_test_element_info = getVisibleAndClickableElements ();
-//return JSON.stringify(elementInfo);
 
 /**
  * This functions determines all visible and clickable elements on the page and 
@@ -83,7 +84,7 @@ function getVisibleAndClickableElements () {
  
             attachElement.appendChild(numberDiv);
 
-            /* Show the calculated visible rectangle of the element
+            // Show the calculated visible rectangle of the element
             const elementRectangle = document.createElement('div');
             elementRectangle.style.position = 'absolute';
             elementRectangle.style.top = rect.y + 'px';
@@ -97,7 +98,7 @@ function getVisibleAndClickableElements () {
             elementRectangle.style.pointerEvents = 'none';
             
             attachElement.appendChild(elementRectangle);
-            */
+            
         }
     });
      return elementsCoordinates;
@@ -161,7 +162,7 @@ function elementFromPointDeep(x, y) {
 }
 
 /**
- * Function determines the visible rectangle of an element that's not obscured by other elements
+ * Function determines an approximation of the visible rectangle of an element that's not obscured by other elements
  * @param {*} element 
  * @returns the visible rectangle of an element that's not obscured by other elements { x, y, width, height }
  */
@@ -186,8 +187,8 @@ function getVisibleRect(element) {
     let maxY = Number.MIN_SAFE_INTEGER;
 
     const divider = 10;
-    for (x = 0; x < divider; ++x) {
-        for (y = 0; y < divider; ++y) {
+    for (let x = 0; x < divider; ++x) {
+        for (let y = 0; y < divider; ++y) {
             const point = { x: boundingRect.left + boundingRect.width * x / divider, y: boundingRect.top + boundingRect.height * y / divider };
             const topElement = elementFromPointDeep(point.x, point.y);
 

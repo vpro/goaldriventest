@@ -2,16 +2,40 @@
   "name": "goaldriventest",
   "version": "0.0.1",
   "description": "Ask AI to test your website with a specific goal",
-  "main": "test.js",
+  "main": "src/goaldriventest.js",
+  "bin": {
+    "goaldriventest": "src/goaldriventest.js"
+  },
   "scripts": {
-    "test": "npm run test"
+    "start": "node src/goaldriventest.js"
   },
   "repository": {
     "type": "git",
     "url": ".git"
   },
   "author": "M. Elhorst",
-  "license": "ISC",
+  "license": "MIT",
+  "files": [
+    "*.json",
+    "src",
+    "examples"
+  ],
+  "keywords": [
+    "test",
+    "AI",
+    "CLI",
+    "automation",
+    "goal",
+    "driven",
+    "goaldriven",
+    "goal-driven",
+    "goaldriventest",
+    "goal-driven-test",
+    "goaldriven-test",
+    "goal-driven-test",
+    "goaldriven-test",
+    "goal-driven-test"
+  ],
   "dependencies": {
     "argparse": "^2.0.1",
     "axios": "^1.6.1",

@@ -1,6 +1,8 @@
 // Copyright (c) Mathijn Elhorst.
 // Licensed under the MIT license.
 
+'use strict';
+
 // This file contains the logic for the "actions" that the AI can take. 
 // The class Action is the abstract base class for all actions
 class Action {

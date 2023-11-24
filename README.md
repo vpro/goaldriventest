@@ -42,8 +42,6 @@ Before you can harness the power of GoalDrivenTest, you need to get it up and ru
    npm install 
    ```
 
-After a successful installation, you’re ready to set your goals and test away!
-
 ## Usage
 
 GoalDrivenTest operates from the command line and is designed to be user-friendly.
@@ -71,6 +69,7 @@ Please be aware of the following known issues:
 
 - **Issue #1:** This is a Proof of Concept (PoC), meaning that error handling is not well worked out and code needs to be seriously refactored in many places. But to my knowledge it is working quiet well in the happy flow. Feel free to improve on it and give feedback. 
 - **Issue #2:** OpenAI cannot give accurate enough coordinates of the HTML elements. To circumvent this limitation, clickable elements are marked with a number before the screenshot is taken. There are situations that this blocks the interface too much, making it difficult for the AI to interpret. Uploading two versions of a screenshot, one with and without numbers, is too expensive. 
+- **Issue #3:** Any native interface elements don't show up in the screenshots and even if that would be the case they would probably require good enough x,y coordinates to be handled. To be investigated.
 
 Stay updated by checking the [Issues](https://github.com/Mathijne/goaldriventest/issues) page of our repository.
 
