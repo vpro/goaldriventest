@@ -1,5 +1,7 @@
 // Copyright (c) Mathijn Elhorst.
 // Licensed under the MIT license.
+// Main file for the goal driven test
+// This file contains the main function that runs the test
 
 'use strict';
 
@@ -188,6 +190,10 @@ async function main() {
         throw new Error('Could not navigate to URL');
     }
 
+    console.log('Starting test run');
+    console.log('Goal: ' + args.goal);
+    console.log('Starting URL: ' + args.url);
+
     const screenshots = [];
     const actionResults = [];
     let prompt_messages = [ { "role": "system", "content": prompt } ]
@@ -195,6 +201,7 @@ async function main() {
     await new Promise(resolve => setTimeout(resolve, BROWSER_DELAY_MSECS));
     screenshots.push(await get_screenshot(page, true));
 
+    
     // Our testing loop
     let step = 0;
     let achieved = false;

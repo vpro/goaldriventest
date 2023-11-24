@@ -1,3 +1,10 @@
+// Copyright (c) Mathijn Elhorst.
+// Licensed under the MIT license.
+//
+// This script will run in the browser to mark all clickable items with a number in a yellow circle.
+// It will also store an array of objects with the x,y,width and height of the element that will be used
+// to determine a x,y position of the element when the AI is running.
+
 'use strict';
 
 window.goal_driven_test_element_info = getVisibleAndClickableElements ();

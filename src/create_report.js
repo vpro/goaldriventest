@@ -1,3 +1,7 @@
+// Copyright (c) Mathijn Elhorst.
+// Licensed under the MIT license.
+// Contains the function to create a testing report in a fully self contained HTML file
+
 'use strict';
 
 const actions = require('./actions');
