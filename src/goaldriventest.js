@@ -173,7 +173,7 @@ async function main() {
         }
         const content = response.content[0];
         if (content.type !== 'text' || content.text === undefined || content.text.includes('```json') === false) {
-            throw new Error('API response doens\'t contain JSON');
+            throw new Error('API response doesn\'t contain JSON');
         }
     
         let jsonString = content.text.replace('```json\n', '').replace('\n```', '');
