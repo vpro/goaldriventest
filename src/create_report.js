@@ -198,7 +198,7 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
             <p>Start time: ${startime.toFormat('yyyy-LL-dd HH:mm:ss')}</p>
             <p>End time: ${DateTime.now().toFormat('yyyy-LL-dd HH:mm:ss')}</p>
             <p>Number of steps: ${screenshots.length - 1}</p>
-            <p>Goal achieved: ${prompt_messages.length > 0 && contentToJson(prompt_messages[prompt_messages.length - 1].content).achieved ? 'Yes' : 'No'}</p>
+            <p>Goal achieved: ${prompt_messages.length > 0 && contentToJson(prompt_messages[prompt_messages.length - 1].content[0].text).achieved ? 'Yes' : 'No'}</p>
             <p>Browser: ${args.browser}</p>
             <p>Device: ${args.emulate}</p>
         </div>
@@ -212,11 +212,11 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
         const prompt_message = prompt_messages[i];
         
         if (prompt_message.role === "assistant") {
-            let json_data = contentToJson(prompt_message.content);
+            let json_data = contentToJson(prompt_message.content[0].text);
             let next_json_data;
             for (let j = i + 1; j < prompt_messages.length; j++) {
                 if (prompt_messages[j].role === "assistant") {
-                    next_json_data = contentToJson(prompt_messages[j].content);
+                    next_json_data = contentToJson(prompt_messages[j].content[0].text);
                     break;
                 }
             }

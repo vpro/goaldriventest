@@ -76,6 +76,15 @@ class Action {
 
 }
 
+/**
+ * Below are the actual actions that the AI can take
+ * 
+ */
+
+
+/**
+ * The ClickAction class is the action that is performed when the AI wants to click on an element
+ */
 class ClickAction extends Action {
     constructor() {
         super('click');
@@ -110,6 +119,9 @@ class ClickAction extends Action {
     }    
 }
 
+/**
+ * The ScrollAction class is the action that is performed when the AI wants to scroll on an element or the page
+ */
 class ScrollAction extends Action {
     constructor() {
         super('scroll');
@@ -194,6 +206,10 @@ class ScrollAction extends Action {
     }
 }
 
+/**
+ * The NavigateAction class is the action that is performed when the AI wants to navigate to the previous or next page
+ * 
+ */ 
 class NavigateAction extends Action {
     constructor() {
         super('navigate');
@@ -233,6 +249,9 @@ class NavigateAction extends Action {
     }    
 }
 
+/**
+ * The InputAction class is the action that is performed when the AI wants to input text
+ */
 class InputAction extends Action {
     constructor() {
         super('input');
@@ -267,6 +286,9 @@ class InputAction extends Action {
     }    
 }
 
+/**
+ * The actions object contains all the actions that the AI can take
+ */
 
 const actions = {
     click: new ClickAction(),
@@ -276,5 +298,4 @@ const actions = {
 };
 
 module.exports = actions;
-
 

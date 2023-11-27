@@ -15,18 +15,12 @@ const OpenAI = require('openai');
 const actions = require('./actions');
 const { installMouseHelper } = require('./mouse_helper');
 const { create_report } = require('./create_report');
+const { OpenAIClient, AIPlaybackClient } = require('./ai_client');
 
 // Set up OpenAI
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-if (!OPENAI_API_KEY) {
-    throw new Error("OpenAI API key (OPENAI_API_KEY) not found in environment variables");
-}
-
-const openai = new OpenAI({
-    apiKey: OPENAI_API_KEY,
-});
-const openaiModel = 'gpt-4-vision-preview';
+const OPENAI_MAX_TOKENS = 350;
+const OPENAI_MODEL = 'gpt-4-vision-preview';
 
 // Other setup
 const MAX_STEPS = 5;
@@ -55,7 +49,7 @@ parser.add_argument('-V', '--version', { help: "version number", action: "versio
 const args = parser.parse_args();
 const startime = DateTime.now()
 
-let prompt = `
+let systemPrompt = `
 You are going to test a website. You will be given a URL and a screenshot of the website.  
 You try to understand the screenshots content and layout. From that you determine what the next logical 
 action will be to reach the given goal below. 
@@ -80,10 +74,10 @@ The following actions are available:
 
 `
 for (const action in actions) {
-    prompt += actions[action].getPromptInfo() + '\n\n';
+    systemPrompt += actions[action].getPromptInfo() + '\n\n';
 }
 
-prompt += `
+systemPrompt += `
 Some things to take into consideration:
 - If there is any cookiebar present, click it away first.
 - If you need to search and both a text input field and search icon or search button are next to eachother, start with a click on the text input field.
@@ -95,28 +89,6 @@ Some things to take into consideration:
 Please only output the JSON structure, nothing else.
 
 Goal: ` + args.goal
-
-function write_prompts(filename, prompt_messages)
-{
-    const file = fs.openSync(filename, 'w')
-    if (file !== undefined) {
-        fs.writeSync(file, JSON.stringify(prompt_messages, null, 4));
-        fs.closeSync(file);
-    }
-} 
-
-function read_prompts(filename)
-{
-    let allmessages = JSON.parse(fs.readFileSync(filename, 'utf8'));
-    let messages = []
-    allmessages.forEach(prompt_message => {
-        if (prompt_message.role === 'assistant') {
-            messages.push(prompt_message);
-        }
-    });
-    console.log(messages);
-    return messages;
-} 
 
 async function get_screenshot(page, mark_clickable_objects = true)
 {
@@ -142,6 +114,7 @@ async function get_screenshot(page, mark_clickable_objects = true)
 
     return screenshotBuf.toString('base64');
 }
+
 // Main function
 async function main() {
     if (args.list) {
@@ -149,6 +122,23 @@ async function main() {
         return;
     }
 
+    // Init the API
+    let aiAPI;
+    if (args.playback) {
+        aiAPI = new AIPlaybackClient(args.playback);
+        console.log("Playback from file: " + args.playback + " steps: " + aiAPI.getNumberOfSteps()); 
+        if (args.maxsteps > aiAPI.getNumberOfSteps()) {
+            console.log("Info: maxsteps is larger than the number of steps in the playback file, setting maxsteps to " + aiAPI.getNumberOfSteps());
+            args.maxsteps = playbackPromptMessages.length;
+        }
+    } 
+    else {
+        aiAPI = new OpenAIClient(OPENAI_API_KEY, OPENAI_MODEL, OPENAI_MAX_TOKENS);
+        console.log("Using the OpenAI API");
+    }
+    aiAPI.addSystemPrompt(systemPrompt);
+ 
+    // Init puppeteer
     let browser;
     if (args.browser === 'chrome') {
         browser = await puppeteer.launch({ headless: (args.noheadless ? false : "new"), args: ['--no-sandbox'] });
@@ -165,15 +155,6 @@ async function main() {
         browser = await puppeteer.launch({ headless: !args.noheadless, args: ['--no-sandbox'], product: 'firefox' });
     } else {
         throw new Error('Browser not recognized');
-    }
-
-    let playbackPromptMessages = []
-    if (args.playback) {
-        playbackPromptMessages = read_prompts(args.playback);
-        if (args.maxsteps > playbackPromptMessages.length) {
-            console.log("Info: maxsteps is larger than the number of steps in the playback file, setting maxsteps to " + playbackPromptMessages.length);
-            args.maxsteps = playbackPromptMessages.length;
-        }
     }
 
     const page = await browser.newPage();
@@ -196,27 +177,24 @@ async function main() {
     console.log('Starting test run\n');
     console.log('Starting URL: ' + args.url);
     console.log(`Goal: "${args.goal}"`);
+    console.log('Max steps: ' + args.maxsteps);
 
     const screenshots = [];
     const actionResults = [];
-    let prompt_messages = [ { "role": "system", "content": prompt } ]
 
     await new Promise(resolve => setTimeout(resolve, BROWSER_DELAY_MSECS));
-    screenshots.push(await get_screenshot(page, true));
+    screenshots.push(await get_screenshot(page, USE_ELEMENT_NUMBERS_FOR_CLICK));
 
-    
     // Our testing loop
     let step = 0;
     let achieved = false;
 
     while(step < args.maxsteps && !achieved) { 
         console.log('Step ' + (step + 1));
- 
-        // Let OpenAI decide what action to take given the screenshot and the prompt
-        let temp_prompt_messages = prompt_messages
-        temp_prompt_messages.push({
-		    role: 'user',
-			content: [
+
+        const prompt = {
+		    role: 'user', 
+            content: [
 				{
 					type: 'text',
 					text: 'This is step ' + step + '. Continue with this image, what\'s your next action? The url is ' + page.url()
@@ -228,48 +206,19 @@ async function main() {
 					}
 				}
 			]
-		})
+		};
+        const response = await aiAPI.processPrompt(prompt);
 
-        let response;
-        if (args.playback && playbackPromptMessages.length > 0) {
-            while (playbackPromptMessages.length && playbackPromptMessages[0].role !== 'assistant') {
-                playbackPromptMessages.shift();
-            }
-            if (playbackPromptMessages.length === 0) {
-                throw new Error('No more prompts in playback file');
-            }
-
-            response = {
-                choices: [
-                    {
-                        message: playbackPromptMessages.shift(),
-                        finish_details: { type: 'stop', stop: '<|fim_suffix|>' }
-                    }
-                ]
-            }
+        if (!response || response.content?.length === 0) {
+            throw new Error('No response from API');
         }
-        else {
-            response = await openai.chat.completions.create({
-                messages: temp_prompt_messages,
-                max_tokens: 350,
-                model: openaiModel,
-            });    
+        const content = response.content[0];
+        if (content.type !== 'text' || content.text === undefined || content.text.includes('```json') === false) {
+            throw new Error('API response doens\'t contain JSON');
         }
-
-        if (response.choices.length === 0) {
-            throw new Error('No response from OpenAI');
-        }
-        if (response.choices[0].finish_details.type !== 'stop') {
-            console.log("Failure: " + response);
-            throw new Error('OpenAI did not finish but gave as failure reason: ' + response.choices[0].finish_details.type);
-        }
-        
-        prompt_messages.push({ role: 'user', content: 'Continue with this image, what\'s your next action?' });
-        prompt_messages.push({ role: 'assistant', 'content': response.choices[0].message.content });
     
-        let jsonString = response.choices[0].message.content.replace('```json\n', '').replace('\n```', '');
+        let jsonString = content.text.replace('```json\n', '').replace('\n```', '');
         let jsonObject = JSON.parse(jsonString);
-        console.log(jsonObject);
 
         if (jsonObject.achieved === false) {
 
@@ -291,12 +240,13 @@ async function main() {
             achieved = true;
         }
 
-        screenshots.push(await get_screenshot(page, true));
+        screenshots.push(await get_screenshot(page, USE_ELEMENT_NUMBERS_FOR_CLICK));
 
-        if (args.store) {
-            write_prompts(args.store, prompt_messages);
+        if (args.store && args.store != args.playback) {
+            aiAPI.writePromptHistoryToFile(args.store);
         }
-        create_report(args.filename, prompt_messages, screenshots, actionResults, args, startime);
+
+        create_report(args.filename, aiAPI.getPromptHistory(), screenshots, actionResults, args, startime);
 
         step += 1;
     }
@@ -307,12 +257,10 @@ async function main() {
     }
     else {
         process.exitCode = 1;
-        if (step <= args.maxsteps) {
-            console.log('Goal not achieved');
+        if (step > args.maxsteps) {
+            console.log('Maximum number of steps (' + args.maxsteps + ') reached.');
         }
-        else {
-            console.log('Maximum number of steps (' + args.maxsteps + ') reached');
-        }
+        console.log('Goal not achieved.');
     }
 
     // Close browser
