@@ -13,6 +13,7 @@ const { ArgumentParser } = require('argparse');
 const { DateTime } = require('luxon');
 const OpenAI = require('openai');
 const actions = require('./actions');
+const getSystemPrompt = require('./system_prompt');
 const { installMouseHelper } = require('./mouse_helper');
 const { create_report } = require('./create_report');
 const { OpenAIClient, AIPlaybackClient } = require('./ai_client');
@@ -27,68 +28,6 @@ const MAX_STEPS = 5;
 const USE_ELEMENT_NUMBERS_FOR_CLICK = true;
 const BROWSER_DELAY_MSECS = 4000; // Time in milliseconds
 const SCREENSHOT_MAXSIZE = { width: 1024, height: 1024 };
-
-// Prompt
-
-// Argument parsing
-const parser = new ArgumentParser();
-parser.add_argument('url', { help: 'Starting URL' });
-parser.add_argument('goal', { help: 'Goal of the test' });
-parser.add_argument('filename', { help: 'Filename to store the results of the test' });
-
-parser.add_argument('-b', '--browser', { default: 'chrome', help: 'Browser to use (firefox or chrome)' });
-parser.add_argument('--playback', { help: 'playback the test run from the json file from a previous recording' });
-parser.add_argument('--store', { help: 'Save the test run to json file for use by playback' });
-parser.add_argument('--noheadless', { action: 'store_true', help: 'Don\'t use a headless browser' });
-parser.add_argument('--stealth', { action: 'store_true', help: 'Add some HTTP headers to hide puppeteer usage' });
-parser.add_argument('-m', '--maxsteps', { default: MAX_STEPS, help: 'The maximum number of steps to take' });
-parser.add_argument('-e', '--emulate', { default: 'iPad Mini landscape', help: 'Emulate device' });
-parser.add_argument('-l', '--list', { action: 'store_true', help: 'List possible devices' });
-parser.add_argument('-V', '--version', { help: "version number", action: "version", version: "v0.1.0" });
-
-const args = parser.parse_args();
-const startime = DateTime.now()
-
-let systemPrompt = `
-You are going to test a website. You will be given a URL and a screenshot of the website.  
-You try to understand the screenshots content and layout. From that you determine what the next logical 
-action will be to reach the given goal below. 
-Look back through all previous actions (if any) to see what your intention was and what you expected to happen and follow up on your intentions. 
-Change tactics to reach your goal if necessary. But do not repeat yourself!
-
-Every time you receive a screenshot of the website you determine your next action. 
-You return a JSON structure that contains that action in the following form, all other fields are required:
-- "description": A brief description of the action you are going to perform. Use enough detail to use it to have a history of what you did to use in next steps.
-- "action": # The action you are going to take, see below for the structure.
-- "expectation": Your prediction of what will happen when the action is taken. You are going to check this in the next step!
-- "step": A number representing the order or sequence of the action in achieving the goal.
-- "url": The url of the screenshot you are looking at.
-- "goal": Restate the overarching goal you are trying to reach.
-- "achieved": A boolean (true or false) indicating if the goal has been achieved or not. If so, action can be empty as this run is finished.
-- "previousExpectation": the expectation of the previous step.
-- "expectationSatisfied": A boolean (true or false) indicating if the previous expectation was met. Remember to evaluate the expectation of the previous step to carefully determine if it was met or not.
-- "frustrationLevel": A number between 1 and 10 indicating how frustrated you are with the website. 1 is not frustrated at all, 10 is very frustrated. 
-- "frustrationLevelReason": A brief description of where your frustrationLevel is coming from.
-
-The following actions are available:
-
-`
-for (const action in actions) {
-    systemPrompt += actions[action].getPromptInfo() + '\n\n';
-}
-
-systemPrompt += `
-Some things to take into consideration:
-- If there is any cookiebar present, click it away first.
-- If you need to search and both a text input field and search icon or search button are next to eachother, start with a click on the text input field.
-- If only a search icon or search button is present, click it first. 
-- A text input field is only focussed and ready for text input when there is a (difficult to see) vertical cursor bar present. 
-- You can add a \n to a single line input text string to to simulate a press on the enter key.
-- Be very carefull to use elementNumbers only from the current screenshot, not from any previous action as numbers will change between screenshots!
-
-Please only output the JSON structure, nothing else.
-
-Goal: ` + args.goal
 
 async function get_screenshot(page, mark_clickable_objects = true)
 {
@@ -117,6 +56,25 @@ async function get_screenshot(page, mark_clickable_objects = true)
 
 // Main function
 async function main() {
+    // Argument parsing
+    const parser = new ArgumentParser();
+    parser.add_argument('url', { help: 'Starting URL' });
+    parser.add_argument('goal', { help: 'Goal of the test' });
+    parser.add_argument('filename', { help: 'Filename to store the results of the test' });
+
+    parser.add_argument('-b', '--browser', { default: 'chrome', help: 'Browser to use (firefox or chrome)' });
+    parser.add_argument('--playback', { help: 'playback the test run from the json file from a previous recording' });
+    parser.add_argument('--store', { help: 'Save the test run to json file for use by playback' });
+    parser.add_argument('--noheadless', { action: 'store_true', help: 'Don\'t use a headless browser' });
+    parser.add_argument('--stealth', { action: 'store_true', help: 'Add some HTTP headers to hide puppeteer usage' });
+    parser.add_argument('-m', '--maxsteps', { default: MAX_STEPS, help: 'The maximum number of steps to take' });
+    parser.add_argument('-e', '--emulate', { default: 'iPad Mini landscape', help: 'Emulate device' });
+    parser.add_argument('-l', '--list', { action: 'store_true', help: 'List possible devices' });
+    parser.add_argument('-V', '--version', { help: "version number", action: "version", version: "v0.1.0" });
+
+    const args = parser.parse_args();
+    const startime = DateTime.now()
+
     if (args.list) {
         console.log('Possible devices to simulate:\n' + Object.keys(puppeteer.KnownDevices).join('\n'));
         return;
@@ -129,14 +87,14 @@ async function main() {
         console.log("Playback from file: " + args.playback + " steps: " + aiAPI.getNumberOfSteps()); 
         if (args.maxsteps > aiAPI.getNumberOfSteps()) {
             console.log("Info: maxsteps is larger than the number of steps in the playback file, setting maxsteps to " + aiAPI.getNumberOfSteps());
-            args.maxsteps = playbackPromptMessages.length;
+            args.maxsteps = aiAPI.getNumberOfSteps();
         }
     } 
     else {
         aiAPI = new OpenAIClient(OPENAI_API_KEY, OPENAI_MODEL, OPENAI_MAX_TOKENS);
         console.log("Using the OpenAI API");
     }
-    aiAPI.addSystemPrompt(systemPrompt);
+    aiAPI.addSystemPrompt(getSystemPrompt(args.goal, actions));
  
     // Init puppeteer
     let browser;
@@ -174,6 +132,7 @@ async function main() {
         throw new Error('Could not navigate to URL');
     }
 
+    // All set up, let's go!
     console.log('Starting test run\n');
     console.log('Starting URL: ' + args.url);
     console.log(`Goal: "${args.goal}"`);
@@ -269,5 +228,4 @@ async function main() {
 
 // Run the main function
 main().catch(console.error);
-
 
