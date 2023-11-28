@@ -5,6 +5,13 @@
 const OpenAI = require('openai');
 const fs = require('fs');
 
+// Chose to keep it a simple client where you pass in multiple prompts and get back multiple responses
+// format of in- and output is the same: { role: string, content: [ { type: "text", text: string } / { type: "image_url", image_url: string } ] }
+// role is either "user", "assistant" or "system"
+// content is an array containing either text or image_url
+// The input format is the same as OpenAI's chat API, but the output format is different
+// Let's see how long this holds...
+
 class AIClient {
     prompt_history = [];
 
@@ -20,7 +27,7 @@ class AIClient {
 
     /**
      * Add system prompt for the initial prompt initialization
-     * There is no response for this prompt
+     * There is no response for this prompt, it will be sent as part of history for the next prompt
      */
     async addSystemPrompt(textPrompt) {
         const prompt = { role: "system", content: [ { type: "text", text: textPrompt } ] };
@@ -51,7 +58,7 @@ class AIClient {
             fs.closeSync(file);
         }
         else {
-            console.log("Could not open file " + filename + " for writing");
+            throw new Error("AIClient::writePromptHistoryToFile: Could not open file " + filename);
         }    
     }    
 
@@ -136,6 +143,11 @@ class OpenAIClient extends AIClient {
     }
 }
 
+/**
+ * This class is used to replay a previously recorded conversation
+ * It can read the format as written by writePromptHistoryToFile in the base class
+ * 
+ */
 class AIPlaybackClient extends AIClient {
     recordedPrompts = [];
 
