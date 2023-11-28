@@ -15,10 +15,11 @@ GoalDrivenTest is an innovative Proof of Concept tool designed to assess and tes
 In essence, GoalDrivenTest offers an intuitive, insightful, and futuristic approach to website testing, making the process more dynamic and aligned with real-world user behaviors and expectations.
 
 ## Example
-Screenrecording for the goal "Find the information page about the series 'For All Mankind'." on www.vprogids.nl.cinema:
+See the screenrecording below. It's run with the goal "Find the information page about the series 'For All Mankind'." on the website www.vprogids.nl.cinema. You can clearly see that the AI is really aware of the content and gets frustrated that it cannot discriminate beforehand on a movie and series page. Quite impressive.
+
 [![Sceen recording of a run](examples/mankind.jpg)](examples/mankind.mp4)
 
-Example report created for the same run as the recording:
+Below is the full report that was created during the recording above:
 [![HTML report example](examples/mankind_report.jpg)](examples/mankind.html)
 
 ## Installation
