@@ -175,7 +175,7 @@ class AIPlaybackClient extends AIClient {
         const allmessages = JSON.parse(fs.readFileSync(filename, 'utf8'));
         const messages = allmessages.filter(prompt_message => prompt_message.role === 'assistant');
         // if old format, convert to new format
-        if (messages.length !== 0 && messages[0].content !== undefined) {
+        if (messages.length !== 0 && messages[0].content !== undefined && messages[0].content[0].type === undefined) {
             return messages.map(prompt_message => {
                 return {
                     role: prompt_message.role,
