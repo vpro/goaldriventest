@@ -45,21 +45,21 @@ Before you can harness the power of GoalDrivenTest, you need to get it up and ru
 
 ## Usage
 
-GoalDrivenTest operates from the command line and is designed to be user-friendly.
+GoalDrivenTest operates from the command line.
 
 **Basic Command Structure:**
 ```
-node goaldriventest.js https://yourwebsite.com "state your goal to test the site here" report.html
+goaldriventest https://yourwebsite.com "state your goal to test the site here" report.html
 ```
 
 **Examples:**
 - To show all commandline options:
   ```
-  node goaldriventest.js --help
+  goaldriventest --help
   ```
 - To find the lastest Harry Potter movie and follow the process in a browser window, limit the process to a maximum of 15 steps and use the chrome browser:
   ```
-  node goaldriventest.js --noheadless -m 15 -b chrome https://www.vprogids.nl/cinema "find the movie overview page of the latest 'harry potter' movie" report.html
+  goaldriventest --noheadless -m 15 -b chrome https://www.vprogids.nl/cinema "find the movie overview page of the latest 'harry potter' movie" report.html
   ```
 
 Replace the goal and URL with your specific testing parameters.
@@ -69,8 +69,8 @@ Replace the goal and URL with your specific testing parameters.
 Please be aware of the following known issues:
 
 - **Issue #1:** This is a Proof of Concept (PoC), meaning that error handling is not well worked out and code needs to be seriously refactored in many places. But to my knowledge it is working quiet well in the happy flow. Feel free to improve on it and give feedback. 
-- **Issue #2:** OpenAI cannot give accurate enough coordinates of the HTML elements. To circumvent this limitation, clickable elements are marked with a number before the screenshot is taken. There are situations that this blocks the interface too much, making it difficult for the AI to interpret. Uploading two versions of a screenshot, one with and without numbers, is too expensive. 
-- **Issue #3:** Any native interface elements don't show up in the screenshots and even if that would be the case they would probably require good enough x,y coordinates to be handled. To be investigated.
+- **Issue #2:** OpenAI cannot give accurate enough coordinates of the HTML elements. To circumvent this limitation, clickable elements are marked with a number before the screenshot is taken. There are situations that this blocks the interface too much, making it difficult for the AI to interpret. Uploading two versions of a screenshot, one with and without numbers, is too expensive and not needed for the PoC. Note that if elements are not marked correctly, it might be because of a missing selector. Change ELEMENT_NUMBERS_SELECTOR in goaldriventest.js for your situation.
+- **Issue #3:** Native interface elements (like dropdowns) don't show up in the screenshots and even if that would be the case they would probably require good enough x,y coordinates to be handled. To be investigated.
 
 Stay updated by checking the [Issues](https://github.com/Mathijne/goaldriventest/issues) page of our repository.
 
