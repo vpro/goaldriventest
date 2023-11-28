@@ -18,7 +18,10 @@ window.goal_driven_test_element_info = getVisibleAndClickableElements ();
  */
 function getVisibleAndClickableElements () { 
     // Collect all clickable elememts, also the ones in the shadowdoms
-    const selector = 'a, button, use, select, input, i, [role="button"], [tabindex]:not([tabindex="-1"]';
+    let selector = 'a, button, use, select, input, [role="button"], [tabindex]:not([tabindex="-1"]';
+    if (window.goal_driven_test_element_override_selector) {
+        selector = window.goal_driven_test_element_override_selector;
+    }
     const clickableElements = querySelectorDeep(selector);  
 
     // get rid of cookie consent first
