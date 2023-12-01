@@ -1,13 +1,13 @@
-'use strict';
-
 // This injects a box into the page that moves with the mouse;
 // Useful for debugging
 // See https://gist.github.com/aslushnikov/94108a4094532c7752135c42e12a00eb
 
+'use strict';
+
 async function installMouseHelper( page ) {
     await page.evaluateOnNewDocument( () => {
     // Install mouse helper only for top-level frame.
-        if ( window !== window.parent ) {return;}
+        if ( window !== window.parent ) { return; }
         window.addEventListener( 'DOMContentLoaded', () => {
             const box = document.createElement( 'puppeteer-mouse-pointer' );
             const styleElement = document.createElement( 'style' );
@@ -50,25 +50,24 @@ async function installMouseHelper( page ) {
       `;
             document.head.appendChild( styleElement );
             document.body.appendChild( box );
-            document.addEventListener( 'mousemove', event => {
-                box.style.left = event.pageX + 'px';
-                box.style.top = event.pageY + 'px';
+            document.addEventListener( 'mousemove', ( event ) => {
+                box.style.left = `${event.pageX}px`;
+                box.style.top = `${event.pageY}px`;
                 updateButtons( event.buttons );
             }, true );
-            document.addEventListener( 'mousedown', event => {
+            document.addEventListener( 'mousedown', ( event ) => {
                 updateButtons( event.buttons );
-                box.classList.add( 'button-' + event.which );
+                box.classList.add( `button-${event.which}` );
             }, true );
-            document.addEventListener( 'mouseup', event => {
+            document.addEventListener( 'mouseup', ( event ) => {
                 updateButtons( event.buttons );
-                box.classList.remove( 'button-' + event.which );
+                box.classList.remove( `button-${event.which}` );
             }, true );
             function updateButtons( buttons ) {
-                for ( let i = 0; i < 5; i++ ) {box.classList.toggle( 'button-' + i, buttons & ( 1 << i ) );}
+                for ( let i = 0; i < 5; i++ ) { box.classList.toggle( `button-${i}`, buttons & ( 1 << i ) ); }
             }
         }, false );
     } );
 }
 
-module.exports = {installMouseHelper};
-
+module.exports = { installMouseHelper };

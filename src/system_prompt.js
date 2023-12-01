@@ -1,6 +1,11 @@
+// Copyright (c) Mathijn Elhorst.
+// Licensed under the MIT license.
+// The prompt that drives the AI.
+
+'use strict';
+
 
 function getSystemPrompt( goal, actions ) {
-
     let systemPrompt = `
     You are going to test a website. You will be given a URL and a screenshot of the website.  
     You try to understand the screenshots content and layout. From that you determine what the next logical 
@@ -26,7 +31,7 @@ function getSystemPrompt( goal, actions ) {
 
     `;
     for ( const action in actions ) {
-        systemPrompt += actions[action].getPromptInfo() + '\n\n';
+        systemPrompt += `${actions[action].getPromptInfo()}\n\n`;
     }
 
     systemPrompt += `
@@ -40,7 +45,7 @@ function getSystemPrompt( goal, actions ) {
 
     Please only output the JSON structure, nothing else.
 
-    Goal: ` + goal;
+    Goal: ${goal}`;
 
     return systemPrompt;
 }

@@ -1,9 +1,7 @@
 // Copyright (c) Mathijn Elhorst.
 // Licensed under the MIT license.
-// This file contains the logic for the "actions" that the AI can take. 
-
+// This file contains the logic for the "actions" that the AI can take.
 'use strict';
-
 // The class Action is the abstract base class for all actions
 class Action {
     constructor( actionType ) {
@@ -48,12 +46,12 @@ class Action {
             return undefined;
         }
 
-        const elements = JSON.parse( await page.evaluate( () => { return JSON.stringify( window['goal_driven_test_element_info'] ); } ) );
+        const elements = JSON.parse( await page.evaluate( () => JSON.stringify( window.goal_driven_test_element_info ) ) );
         if ( elements === undefined || actionPayload.elementNumber < 0 || actionPayload.elementNumber >= elements.length ) {
             return undefined;
         }
-        
-        return elements[actionPayload.elementNumber]; 
+
+        return elements[actionPayload.elementNumber];
     }
 
     /**
@@ -66,23 +64,21 @@ class Action {
         const element = await this.getElementInfo( page, actionPayload );
         if ( element === undefined ) {
             // fallback to x and y
-            if ( actionPayload.x === undefined || actionPayload.y === undefined ) { 
+            if ( actionPayload.x === undefined || actionPayload.y === undefined ) {
                 return undefined;
-            } 
-            
+            }
+
             return { x: actionPayload.x, y: actionPayload.y };
         }
 
         return { x: element.x + element.width / 2, y: element.y + element.height / 2 };
     }
-
 }
 
 /**
  * Below are the actual actions that the AI can take
- * 
+ *
  */
-
 
 /**
  * The ClickAction class is the action that is performed when the AI wants to click on an element
@@ -101,9 +97,9 @@ class ClickAction extends Action {
         const info = `Clicking at ${xy?.x}, ${xy?.y}`;
         if ( xy !== undefined ) {
             await page.mouse.click( xy.x, xy.y );
-        }    
-        
-        return info; 
+        }
+
+        return info;
     }
 
     getPromptInfo() {
@@ -116,11 +112,11 @@ class ClickAction extends Action {
         if ( actionPayload.actionType !== this.actionType ) {
             throw new Error( 'Action type does not match' );
         }
-        
+
         return `
             <span id="action-icon">👆 ${actionPayload.actionType}</span>
              <p><b>Element Number:</b> <span id="elementNumber">${actionPayload.elementNumber}</span></p>`;
-    }    
+    }
 }
 
 /**
@@ -139,26 +135,24 @@ class ScrollAction extends Action {
         let xy = await this.getXY( page, actionPayload );
         if ( xy === undefined ) {
             // for the moment go to the middle of the page
-            let size = await page.evaluate( () => {
-                return { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight };
-            } );
+            const size = await page.evaluate( () => ( { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight } ) );
 
             xy = { x: size.width / 2, y: size.height / 2 };
         }
         await page.mouse.move( xy.x, xy.y );
 
-        let distanceX; let 
+        let distanceX; let
             distanceY;
         if ( 'distance' in actionPayload ) {
             const viewport = await page.viewport();
-            if ( actionPayload['distance'] == 'little' ) {
+            if ( actionPayload.distance == 'little' ) {
                 distanceX = viewport.width / 4;
                 distanceY = viewport.height / 4;
-            } else if ( actionPayload['distance'] == 'medium' ) {
+            } else if ( actionPayload.distance == 'medium' ) {
                 distanceX = viewport.width / 2;
                 distanceY = viewport.height / 2;
-            } else if ( actionPayload['distance'] == 'far' ) {
-                distanceX = viewport.width;    
+            } else if ( actionPayload.distance == 'far' ) {
+                distanceX = viewport.width;
                 distanceY = viewport.height;
             } else {
                 throw new Error( 'distance value little, medium or far should be given in scroll action' );
@@ -170,13 +164,13 @@ class ScrollAction extends Action {
         let deltaX = 0;
         let deltaY = 0;
         if ( 'direction' in actionPayload ) {
-            if ( actionPayload['direction'] == 'up' ) {
+            if ( actionPayload.direction == 'up' ) {
                 deltaY = -parseInt( distanceY );
-            } else if ( actionPayload['direction'] == 'down' ) {
+            } else if ( actionPayload.direction == 'down' ) {
                 deltaY = parseInt( distanceY );
-            } else if ( actionPayload['direction'] == 'left' ) {
+            } else if ( actionPayload.direction == 'left' ) {
                 deltaX = -parseInt( distanceX );
-            } else if ( actionPayload['direction'] == 'right' ) {
+            } else if ( actionPayload.direction == 'right' ) {
                 deltaX = parseInt( distanceX );
             } else {
                 throw new Error( 'Direction value up, down, left or right should be given in scroll action' );
@@ -186,8 +180,8 @@ class ScrollAction extends Action {
         }
 
         const info = `Scrolling deltaX: ${deltaX}, deltaY: ${deltaY} on mouse position ${xy.x}, ${xy.y}`;
-        await page.mouse.wheel( { deltaX: deltaX, deltaY: deltaY } );
-        
+        await page.mouse.wheel( { deltaX, deltaY } );
+
         return info;
     }
 
@@ -204,7 +198,7 @@ class ScrollAction extends Action {
         if ( actionPayload.actionType !== this.actionType ) {
             throw new Error( 'Action type does not match' );
         }
-        
+
         return `
             <span id="action-icon">🖱️ ${actionPayload.actionType}</span>
             <p><b>Element Number:</b> <span id="elementNumber">${actionPayload.elementNumber}</span></p>
@@ -215,8 +209,8 @@ class ScrollAction extends Action {
 
 /**
  * The NavigateAction class is the action that is performed when the AI wants to navigate to the previous or next page
- * 
- */ 
+ *
+ */
 class NavigateAction extends Action {
     constructor() {
         super( 'navigate' );
@@ -237,8 +231,8 @@ class NavigateAction extends Action {
             default:
                 throw new Error( 'Invalid direction' );
         }
-   
-        return `Navigate ${actionPayload.direction}`; 
+
+        return `Navigate ${actionPayload.direction}`;
     }
 
     getPromptInfo() {
@@ -251,10 +245,10 @@ class NavigateAction extends Action {
         if ( actionPayload.actionType !== this.actionType ) {
             throw new Error( 'Action type does not match' );
         }
-        
+
         return `
             <span id="action-icon">↔️ ${actionPayload.actionType} ${actionPayload.direction}</span>`;
-    }    
+    }
 }
 
 /**
@@ -276,7 +270,7 @@ class InputAction extends Action {
 
         await page.keyboard.type( actionPayload.text );
 
-        return `Add text ${actionPayload.text}`; 
+        return `Add text ${actionPayload.text}`;
     }
 
     getPromptInfo() {
@@ -289,10 +283,10 @@ class InputAction extends Action {
         if ( actionPayload.actionType !== this.actionType ) {
             throw new Error( 'Action type does not match' );
         }
-        
+
         return `
             <span id="action-icon">🔠 ${actionPayload.actionType}</span>`;
-    }    
+    }
 }
 
 /**
@@ -307,4 +301,3 @@ const actions = {
 };
 
 module.exports = actions;
-

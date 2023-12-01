@@ -11,16 +11,15 @@ const puppeteer = require( 'puppeteer' );
 const sharp = require( 'sharp' );
 const { ArgumentParser } = require( 'argparse' );
 const { DateTime } = require( 'luxon' );
+const { console } = require( 'console' );
 const actions = require( './actions' );
 const getSystemPrompt = require( './system_prompt' );
 const { installMouseHelper } = require( './mouse_helper' );
-const { create_report } = require( './create_report' );
+const { createReport } = require( './create_report' );
 const { OpenAIClient, AIPlaybackClient } = require( './ai_client' );
-const { console } = require( 'console' );
-//const { process } = require('process');
 
 // Set up OpenAI
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const { OPENAI_API_KEY } = process.env;
 const OPENAI_MAX_TOKENS = 350;
 const OPENAI_MODEL = 'gpt-4-vision-preview';
 
@@ -33,11 +32,11 @@ const SCREENSHOT_MAXSIZE = { width: 1024, height: 1024 };
 const USE_ELEMENT_NUMBERS_FOR_CLICK = true;
 const ELEMENT_NUMBERS_SELECTOR = 'a, button, use, select, input, [role="button"], [tabindex]:not([tabindex="-1"]';
 
-async function get_screenshot( page, mark_clickable_objects = true ) {
-    if ( mark_clickable_objects ) {
+async function getScreenshot( page, markClickableObjects = true ) {
+    if ( markClickableObjects ) {
         // Label all clickable elements
         let scriptContents = fs.readFileSync( 'src/mark_clickable_objects.js', 'utf8' );
-        scriptContents += '\nwindow.goal_driven_test_element_override_selector=\'' + ELEMENT_NUMBERS_SELECTOR + '\';\n';
+        scriptContents += `\nwindow.goal_driven_test_element_override_selector='${ELEMENT_NUMBERS_SELECTOR}';\n`;
         await page.evaluate( scriptContents );
     }
 
@@ -60,7 +59,6 @@ async function get_screenshot( page, mark_clickable_objects = true ) {
 
 // Main function
 async function main() {
-
     let browser;
     try {
         // Argument parsing
@@ -83,8 +81,8 @@ async function main() {
         const startime = DateTime.now();
 
         if ( args.list ) {
-            console.log( 'Possible devices to simulate:\n' + Object.keys( puppeteer.KnownDevices ).join( '\n' ) );
-            
+            console.log( `Possible devices to simulate:\n${Object.keys( puppeteer.KnownDevices ).join( '\n' )}` );
+
             return;
         }
 
@@ -92,9 +90,9 @@ async function main() {
         let aiAPI;
         if ( args.playback ) {
             aiAPI = new AIPlaybackClient( args.playback );
-            console.log( 'Playback from file: ' + args.playback + ' steps: ' + aiAPI.getNumberOfSteps() ); 
+            console.log( `Playback from file: ${args.playback} steps: ${aiAPI.getNumberOfSteps()}` );
             if ( args.maxsteps > aiAPI.getNumberOfSteps() ) {
-                console.log( 'Info: maxsteps is larger than the number of steps in the playback file, setting maxsteps to ' + aiAPI.getNumberOfSteps() );
+                console.log( `Info: maxsteps is larger than the number of steps in the playback file, setting maxsteps to ${aiAPI.getNumberOfSteps()}` );
                 args.maxsteps = aiAPI.getNumberOfSteps();
             }
         } else {
@@ -114,7 +112,7 @@ async function main() {
                     '--disable-setuid-sandbox',
                     '--no-sandbox'
                 ]
-            });*/
+            }); */
         } else if ( args.browser === 'firefox' ) {
             browser = await puppeteer.launch( { headless: !args.noheadless, args: [ '--no-sandbox' ], product: 'firefox' } );
         } else {
@@ -125,14 +123,14 @@ async function main() {
         await page.emulate( puppeteer.KnownDevices[args.emulate] );
         if ( args.stealth ) {
             /* add for sites that block headless browsers */
-            await page.setExtraHTTPHeaders( { 
-                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36', 
-                'upgrade-insecure-requests': '1', 
-                accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8', 
-                'accept-encoding': 'gzip, deflate, br', 
-                'accept-language': 'en-US,en;q=0.9,en;q=0.8' 
+            await page.setExtraHTTPHeaders( {
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+                'upgrade-insecure-requests': '1',
+                accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'accept-encoding': 'gzip, deflate, br',
+                'accept-language': 'en-US,en;q=0.9,en;q=0.8'
             } );
-        } 
+        }
         const navigateResult = await page.goto( args.url );
         if ( !navigateResult.ok() ) {
             throw new Error( 'Could not navigate to URL' );
@@ -140,34 +138,34 @@ async function main() {
 
         // All set up, let's go!
         console.log( 'Starting test run\n' );
-        console.log( 'Starting URL: ' + args.url );
+        console.log( `Starting URL: ${args.url}` );
         console.log( `Goal: "${args.goal}"` );
-        console.log( 'Max steps: ' + args.maxsteps );
+        console.log( `Max steps: ${args.maxsteps}` );
 
         const screenshots = [];
         const actionResults = [];
 
-        await new Promise( resolve => setTimeout( resolve, BROWSER_DELAY_MSECS ) );
-        screenshots.push( await get_screenshot( page, USE_ELEMENT_NUMBERS_FOR_CLICK ) );
+        await new Promise( ( resolve ) => setTimeout( resolve, BROWSER_DELAY_MSECS ) );
+        screenshots.push( await getScreenshot( page, USE_ELEMENT_NUMBERS_FOR_CLICK ) );
 
         // Our testing loop
         let step = 0;
         let achieved = false;
 
-        while ( step < args.maxsteps && !achieved ) { 
-            console.log( 'Step ' + ( step + 1 ) );
+        while ( step < args.maxsteps && !achieved ) {
+            console.log( `Step ${step + 1}` );
 
             const prompt = {
-                role: 'user', 
+                role: 'user',
                 content: [
                     {
                         type: 'text',
-                        text: 'This is step ' + step + '. Continue with this image, what\'s your next action? The url is ' + page.url()
+                        text: `This is step ${step}. Continue with this image, what's your next action? The url is ${page.url()}`
                     },
                     {
                         type: 'image_url',
                         image_url: {
-                            url: 'data:image/jpeg;base64,' + screenshots[step]
+                            url: `data:image/jpeg;base64,${screenshots[step]}`
                         }
                     }
                 ]
@@ -179,14 +177,13 @@ async function main() {
             }
             const content = response.content[0];
             if ( content.type !== 'text' || content.text === undefined || content.text.includes( '```json' ) === false ) {
-                throw new Error( 'API response doesn\'t contain JSON, response: ' + JSON.stringify( content, null, 4 ) );
+                throw new Error( `API response doesn't contain JSON, response: ${JSON.stringify( content, null, 4 )}` );
             }
-        
-            let jsonString = content.text.replace( '```json\n', '' ).replace( '\n```', '' );
-            let jsonObject = JSON.parse( jsonString );
+
+            const jsonString = content.text.replace( '```json\n', '' ).replace( '\n```', '' );
+            const jsonObject = JSON.parse( jsonString );
 
             if ( jsonObject.achieved === false ) {
-
                 if ( jsonObject.action === undefined || jsonObject.action.actionType === undefined ) {
                     throw new Error( 'No valid action defined' );
                 }
@@ -198,19 +195,19 @@ async function main() {
                 }
                 const actionResult = await action.perform( page, jsonObject.action );
                 actionResults.push( actionResult );
-                console.log( 'Taking action: ' + actionResult );
-                await new Promise( resolve => setTimeout( resolve, BROWSER_DELAY_MSECS ) );
+                console.log( `Taking action: ${actionResult}` );
+                await new Promise( ( resolve ) => setTimeout( resolve, BROWSER_DELAY_MSECS ) );
             } else {
                 achieved = true;
             }
 
-            screenshots.push( await get_screenshot( page, USE_ELEMENT_NUMBERS_FOR_CLICK ) );
+            screenshots.push( await getScreenshot( page, USE_ELEMENT_NUMBERS_FOR_CLICK ) );
 
             if ( args.store && args.store != args.playback ) {
                 aiAPI.writePromptHistoryToFile( args.store );
             }
 
-            create_report( args.filename, aiAPI.getPromptHistory(), screenshots, actionResults, args, startime );
+            createReport( args.filename, aiAPI.getPromptHistory(), screenshots, actionResults, args, startime );
 
             step += 1;
         }
@@ -221,7 +218,7 @@ async function main() {
         } else {
             process.exitCode = 1;
             if ( step > args.maxsteps ) {
-                console.log( 'Maximum number of steps (' + args.maxsteps + ') reached.' );
+                console.log( `Maximum number of steps (${args.maxsteps}) reached.` );
             }
             console.log( 'Goal not achieved.' );
         }
@@ -237,4 +234,3 @@ async function main() {
 
 // Run the main function
 main().catch( console.error );
-

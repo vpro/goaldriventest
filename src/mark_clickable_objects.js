@@ -10,47 +10,47 @@
 window.goal_driven_test_element_info = getVisibleAndClickableElements();
 
 /**
- * This functions determines all visible and clickable elements on the page and 
+ * This functions determines all visible and clickable elements on the page and
  * marks them with a number. It is needed to determine x,y positions of elements
  * because the AI is currently not giving accurate x,y positions of elements.
- * 
+ *
  * @returns an array of objects with visible x,y,width and height of the element and the element itself
  */
-function getVisibleAndClickableElements () { 
+function getVisibleAndClickableElements () {
     // Collect all clickable elememts, also the ones in the shadowdoms
     let selector = 'a, button, use, select, input, [role="button"], [tabindex]:not([tabindex="-1"]';
     if ( window.goal_driven_test_element_override_selector ) {
         selector = window.goal_driven_test_element_override_selector;
     }
-    const clickableElements = querySelectorDeep( selector );  
+    const clickableElements = querySelectorDeep( selector );
 
     // get rid of cookie consent first
     const cookieConsent = document.getElementById( 'ccm_notification_host' );
     if ( cookieConsent && window.getComputedStyle( cookieConsent ).visibility !== 'hidden' && cookieConsent.shadowRoot ) {
-        //cookieConsent.shadowRoot.replaceChildren("");
+        // cookieConsent.shadowRoot.replaceChildren("");
     }
 
-    // Maak een lijst van objecten met de coördinaten en het element, clear any old ones first if present 
+    // Maak een lijst van objecten met de coördinaten en het element, clear any old ones first if present
     const elementsCoordinates = [];
     let attachElement = document.getElementById( 'goal_driven_test_all_numbers' );
     if ( !attachElement ) {
         attachElement = document.body.appendChild( document.createElement( 'div' ) );
         attachElement.id = 'goal_driven_test_all_numbers';
         attachElement.style.position = 'fixed';
-        attachElement.style.left = 0; 
-        attachElement.style.top = 0; 
+        attachElement.style.left = 0;
+        attachElement.style.top = 0;
         attachElement.style.zIndex = '99999999999';
     } else {
         attachElement.replaceChildren( '' );
     }
 
-    let screenRect = {
+    const screenRect = {
         x: 0,
         y: 0,
         width: window.innerWidth,
         height: window.innerHeight
     };
-    
+
     const styleElement = document.createElement( 'style' );
     styleElement.innerHTML = `
         .goal_driven_test_all_numbers_number {
@@ -74,7 +74,7 @@ function getVisibleAndClickableElements () {
     attachElement.appendChild( styleElement );
 
     clickableElements.forEach( ( element, index ) => {
-        let rect = clipRect( getVisibleRect( element ), screenRect );
+        const rect = clipRect( getVisibleRect( element ), screenRect );
         // Check if the element is visible and not behind something else
         if ( rect.width > 0 && rect.height > 0 ) {
             elementsCoordinates.push( {
@@ -88,9 +88,9 @@ function getVisibleAndClickableElements () {
             const numberDiv = document.createElement( 'div' );
             numberDiv.className = 'goal_driven_test_all_numbers_number';
             numberDiv.innerText = elementsCoordinates.length - 1;
-            numberDiv.style.top = ( rect.y + rect.height * 0 - 5 ) + 'px';
-            numberDiv.style.left = ( rect.x + rect.width * 0.4 ) + 'px';
- 
+            numberDiv.style.top = `${rect.y + rect.height * 0 - 5}px`;
+            numberDiv.style.left = `${rect.x + rect.width * 0.4}px`;
+
             attachElement.appendChild( numberDiv );
 
             /* Debug: Show the calculated visible rectangle of the element
@@ -105,40 +105,39 @@ function getVisibleAndClickableElements () {
             elementRectangle.style.borderRadius = '2px';
             elementRectangle.style.zIndex = '99999999999';
             elementRectangle.style.pointerEvents = 'none';
-            
-            attachElement.appendChild(elementRectangle);*/
-            
+
+            attachElement.appendChild(elementRectangle); */
         }
     } );
-    
+
     return elementsCoordinates;
 }
 
 // query elements even deeply within shadow doms
 function querySelectorDeep( selector, rootNode = document.body ) {
     const elements = [];
-    
-    const traverser = node => {
+
+    const traverser = ( node ) => {
         // 1. decline all nodes that are not elements
         if ( node.nodeType !== Node.ELEMENT_NODE ) {
             return elements;
         }
-        
+
         // 2. add the node to the array, if it matches the selector
         if ( node.matches( selector ) ) {
             elements.push( node );
         }
-        
+
         // 3. loop through the children
-        const children = node.children;
+        const { children } = node;
         if ( children.length ) {
             for ( const child of children ) {
                 traverser( child );
             }
         }
-        
+
         // 4. check for shadow DOM, and loop through it's children
-        const shadowRoot = node.shadowRoot;
+        const { shadowRoot } = node;
         if ( shadowRoot ) {
             const shadowChildren = shadowRoot.children;
             for ( const shadowChild of shadowChildren ) {
@@ -146,11 +145,11 @@ function querySelectorDeep( selector, rootNode = document.body ) {
             }
         }
     };
-    
+
     if ( rootNode ) {
         traverser( rootNode );
     }
-    
+
     return elements;
 }
 
@@ -161,36 +160,37 @@ function querySelectorDeep( selector, rootNode = document.body ) {
  * @returns element at the given x,y coordinates
  */
 function elementFromPointDeep( x, y ) {
-    let depth = 0;
+    const depth = 0;
     let element = document.elementFromPoint( x, y );
     while ( element?.shadowRoot ) {
         const inner = element.shadowRoot.elementFromPoint( x, y );
-        if ( !inner || inner === element ) {break;}
+        if ( !inner || inner === element ) { break; }
         element = inner;
     }
-    
+
     return element;
 }
 
 /**
  * Function determines an approximation of the visible rectangle of an element that's not obscured by other elements
- * @param {*} element 
+ * @param {*} element
  * @returns the visible rectangle of an element that's not obscured by other elements { x, y, width, height }
  */
 function getVisibleRect( element ) {
-    
-    if ( !( element instanceof Element ) ) {throw Error( 'DomUtil: elem is not an element.' );}
+    if ( !( element instanceof Element ) ) { throw Error( 'DomUtil: elem is not an element.' ); }
 
-    let visibleRect = { x: 0, y: 0, width: 0, height: 0 };
- 
+    const visibleRect = {
+        x: 0, y: 0, width: 0, height: 0
+    };
+
     const style = getComputedStyle( element );
-    if ( style.display === 'none' || style.visibility !== 'visible' ) {return visibleRect;}
+    if ( style.display === 'none' || style.visibility !== 'visible' ) { return visibleRect; }
 
     const boundingRect = element.getBoundingClientRect();
     if ( element.offsetWidth + element.offsetHeight + boundingRect.height + boundingRect.width === 0 ) {
         return visibleRect;
     }
-    
+
     let isVisible = false;
     let minX = Number.MAX_SAFE_INTEGER;
     let minY = Number.MAX_SAFE_INTEGER;
@@ -213,16 +213,15 @@ function getVisibleRect( element ) {
         }
     }
 
-    if ( isVisible ) { 
+    if ( isVisible ) {
         visibleRect.x = minX;
         visibleRect.y = minY;
         visibleRect.width = Math.max( 1, maxX - minX );
         visibleRect.height = Math.max( 1, maxY - minY );
     }
 
-    return visibleRect; 
+    return visibleRect;
 }
-
 
 function doRectsOverlap( rect1, rect2 ) {
     return !(
@@ -234,7 +233,9 @@ function doRectsOverlap( rect1, rect2 ) {
 }
 
 function clipRect( rectToClip, clippingRect ) {
-    let result = { x: 0, y: 0, width: 0, height: 0 };
+    const result = {
+        x: 0, y: 0, width: 0, height: 0
+    };
     result.x = Math.max( rectToClip.x, clippingRect.x );
     result.y = Math.max( rectToClip.y, clippingRect.y );
     result.width = Math.min( rectToClip.x + rectToClip.width, clippingRect.x + clippingRect.width ) - result.x;
@@ -262,6 +263,6 @@ function isDeepDescendant( parent, child ) {
         }
         node = node.parentNode ? node.parentNode : node.host;
     }
-    
+
     return false;
 }
