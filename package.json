@@ -26,14 +26,8 @@
     "CLI",
     "automation",
     "goal",
-    "driven",
     "goaldriven",
-    "goal-driven",
     "goaldriventest",
-    "goal-driven-test",
-    "goaldriven-test",
-    "goal-driven-test",
-    "goaldriven-test",
     "goal-driven-test"
   ],
   "dependencies": {
@@ -43,5 +37,15 @@
     "openai": "^4.17.4",
     "puppeteer": "^21.5.1",
     "sharp": "^0.32.6"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.5",
+    "@babel/eslint-parser": "^7.23.3",
+    "@babel/eslint-plugin": "^7.23.5",
+    "eslint": "^8.54.0",
+    "eslint-plugin-dollar-sign": "^1.0.2",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-react": "^7.33.2",
+    "vpro-dev": "^0.0.1-security"
   }
 }
