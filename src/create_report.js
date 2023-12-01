@@ -13,7 +13,7 @@ function contentToJson( content ) {
 }
 
 // Todo: make the arguments for this function a little less ugly
-function createReport ( filename, promptMessages, screenshots, actionResults, args, startime ) {
+function createReport( filename, promptMessages, screenshots, actionResults, args, startime ) {
     let htmlContent = `<!DOCTYPE html>
 	<html lang="en">
 	<head>

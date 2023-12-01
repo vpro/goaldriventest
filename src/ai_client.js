@@ -33,7 +33,7 @@ class AIClient {
      */
     async addSystemPrompt( textPrompt ) {
         const prompt = { role: 'system', content: [{ type: 'text', text: textPrompt }] };
-        storePrompt( prompt );
+        this.storePrompt( prompt );
     }
 
     /**
@@ -141,10 +141,10 @@ class OpenAIClient extends AIClient {
         }
 
         // We have success, now add the prompt to the prompt history and return the response
-        storePrompt( prompt );
+        this.storePrompt( prompt );
         // todo: response can in the future also contan images or even more text...
         const response = { role: 'assistant', content: [{ type: 'text', text: apiResponse.choices[0].message.content }] };
-        storePrompt( response );
+        this.storePrompt( response );
 
         return response;
     }
@@ -173,8 +173,8 @@ class AIPlaybackClient extends AIClient {
             throw new Error( 'No more recorded prompts available' );
         }
         const recordedPrompt = this.#recordedPrompts.shift();
-        storePrompt( prompt );
-        storePrompt( recordedPrompt );
+        this.storePrompt( prompt );
+        this.storePrompt( recordedPrompt );
 
         return recordedPrompt;
     }
