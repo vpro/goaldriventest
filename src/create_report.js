@@ -4,17 +4,16 @@
 
 'use strict';
 
-const actions = require('./actions');
-const { DateTime } = require('luxon');
-const fs = require('fs');
+const actions = require( './actions' );
+const { DateTime } = require( 'luxon' );
+const fs = require( 'fs' );
 
-function contentToJson(content) {
-    return JSON.parse(content.replace('```json\n', '').replace('\n```', ''))
+function contentToJson( content ) {
+    return JSON.parse( content.replace( '```json\n', '' ).replace( '\n```', '' ) );
 }
 
 // Todo: make the arguments for this function a little less ugly
-function create_report (filename, prompt_messages, screenshots, actionResults, args, startime) 
-{
+function create_report ( filename, prompt_messages, screenshots, actionResults, args, startime ) {
     let html_content = `<!DOCTYPE html>
 	<html lang="en">
 	<head>
@@ -195,10 +194,10 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
             <h1>Goal:</h1>
             <p><strong>${args.goal}</strong></p>
             <p>URL: <a href="${args.url}">${args.url}</a></p>
-            <p>Start time: ${startime.toFormat('yyyy-LL-dd HH:mm:ss')}</p>
-            <p>End time: ${DateTime.now().toFormat('yyyy-LL-dd HH:mm:ss')}</p>
+            <p>Start time: ${startime.toFormat( 'yyyy-LL-dd HH:mm:ss' )}</p>
+            <p>End time: ${DateTime.now().toFormat( 'yyyy-LL-dd HH:mm:ss' )}</p>
             <p>Number of steps: ${screenshots.length - 1}</p>
-            <p>Goal achieved: ${prompt_messages.length > 0 && contentToJson(prompt_messages[prompt_messages.length - 1].content[0].text).achieved ? 'Yes' : 'No'}</p>
+            <p>Goal achieved: ${prompt_messages.length > 0 && contentToJson( prompt_messages[prompt_messages.length - 1].content[0].text ).achieved ? 'Yes' : 'No'}</p>
             <p>Browser: ${args.browser}</p>
             <p>Device: ${args.emulate}</p>
         </div>
@@ -207,33 +206,33 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
         </div>
     </div>`;            
 
-	let step = 0
-	for (let i = 0; i < prompt_messages.length; i++) {
+    let step = 0;
+    for ( let i = 0; i < prompt_messages.length; i++ ) {
         const prompt_message = prompt_messages[i];
         
-        if (prompt_message.role === "assistant") {
-            let json_data = contentToJson(prompt_message.content[0].text);
+        if ( prompt_message.role === 'assistant' ) {
+            let json_data = contentToJson( prompt_message.content[0].text );
             let next_json_data;
-            for (let j = i + 1; j < prompt_messages.length; j++) {
-                if (prompt_messages[j].role === "assistant") {
-                    next_json_data = contentToJson(prompt_messages[j].content[0].text);
+            for ( let j = i + 1; j < prompt_messages.length; j++ ) {
+                if ( prompt_messages[j].role === 'assistant' ) {
+                    next_json_data = contentToJson( prompt_messages[j].content[0].text );
                     break;
                 }
             }
             const actionPayload = json_data.action;
-            let action_Html = ""
-            if (actionPayload?.actionType) {
+            let action_Html = '';
+            if ( actionPayload?.actionType ) {
                 const action = actions[actionPayload.actionType];
-                if (!action) {
-                    throw new Error('Action ' + actionPayload.actionType + ' not recognized');
+                if ( !action ) {
+                    throw new Error( 'Action ' + actionPayload.actionType + ' not recognized' );
                 }
                 action_Html = `<div class="action">
-                    ${action.getDescriptionHTML(actionPayload)}
+                    ${action.getDescriptionHTML( actionPayload )}
                     <p><b>Action result:</b> <span id="actionResult">${actionResults[step]}</span></p>                
                     </div>`;
             }
 
-			html_content += `
+            html_content += `
             <div class="step-count">
                 <h2>Step ${step + 1}</h2>
             </step-count>
@@ -243,28 +242,27 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
                     <p><b>Description:</b> <span id="description">${json_data.description}</span></p>`;
 
 
-            if (next_json_data) {
-                if (next_json_data.previousExpectation != json_data.expectation) {
-                    console.log("Warning: previousExpectation is not the same as the current expectation");
+            if ( next_json_data ) {
+                if ( next_json_data.previousExpectation != json_data.expectation ) {
+                    console.log( 'Warning: previousExpectation is not the same as the current expectation' );
                 }
-                html_content +=
-                    `<p/>
+                html_content
+                    += `<p/>
                     <p><b>Url:</b> <span id="url"><a href="${next_json_data.url}">${next_json_data.url}</a></span></p>
-                    <p><b>Expectation:</b> <span id="${next_json_data.expectationSatisfied ? "expectation-success" : "expectation-failed"}">${next_json_data.previousExpectation}</span></p>
+                    <p><b>Expectation:</b> <span id="${next_json_data.expectationSatisfied ? 'expectation-success' : 'expectation-failed'}">${next_json_data.previousExpectation}</span></p>
                     <div class="frustration-level">
                         <b>Frustration Level:</b>
                         <my-dial level="${next_json_data.frustrationLevel}"></my-dial>
                         <span id="frustrationLevel">${next_json_data.frustrationLevel}</span>
                     </div>
-                    <p><b>Frustration Level Reason:</b> <span id="frustrationLevelReason">${next_json_data.frustrationLevelReason}.</span></p>`
-            }
-            else {
+                    <p><b>Frustration Level Reason:</b> <span id="frustrationLevelReason">${next_json_data.frustrationLevelReason}.</span></p>`;
+            } else {
                 // This is the last step. We don't know the result of the expectation as we didn't ask the AI, except if the goal was achieved
-                html_content +=
-                    `<p/>
-                    <p><b>Expectation:</b> <span id=${json_data.achieved ? "expectation-success" : "expectation"}}">${json_data.expectation}</span></p>`;
-                if (json_data.achieved) {
-                    html_content += `<p><b>Goal achieved!</b> 🎉</p>`;
+                html_content
+                    += `<p/>
+                    <p><b>Expectation:</b> <span id=${json_data.achieved ? 'expectation-success' : 'expectation'}}">${json_data.expectation}</span></p>`;
+                if ( json_data.achieved ) {
+                    html_content += '<p><b>Goal achieved!</b> 🎉</p>';
                 }
             }
             html_content += `
@@ -275,13 +273,13 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
             </div>`;
             
             // Debug only, marked with display: none in the style
-			html_content += `<div class="json"><pre>{${JSON.stringify(json_data, null, 4)}}</pre></div>`;
+            html_content += `<div class="json"><pre>{${JSON.stringify( json_data, null, 4 )}}</pre></div>`;
 
-			step += 1
+            step += 1;
         }
     }
 
-	html_content += `
+    html_content += `
 		</div>
 		<script>
 			function toggleFullscreen(element) {
@@ -290,13 +288,13 @@ function create_report (filename, prompt_messages, screenshots, actionResults, a
 		</script>
 	</body>
 	</html>
-	`
+	`;
 
-    const file = fs.openSync(filename, 'w')
-    if (file !== undefined) {
-        fs.writeSync(file, html_content)
-        fs.closeSync(file)
+    const file = fs.openSync( filename, 'w' );
+    if ( file !== undefined ) {
+        fs.writeSync( file, html_content );
+        fs.closeSync( file );
     }
 }
 
-module.exports = { create_report }
+module.exports = { create_report };

@@ -1,5 +1,5 @@
 
-function getSystemPrompt(goal, actions) {
+function getSystemPrompt( goal, actions ) {
 
     let systemPrompt = `
     You are going to test a website. You will be given a URL and a screenshot of the website.  
@@ -24,8 +24,8 @@ function getSystemPrompt(goal, actions) {
 
     The following actions are available:
 
-    `
-    for (const action in actions) {
+    `;
+    for ( const action in actions ) {
         systemPrompt += actions[action].getPromptInfo() + '\n\n';
     }
 
@@ -40,7 +40,7 @@ function getSystemPrompt(goal, actions) {
 
     Please only output the JSON structure, nothing else.
 
-    Goal: ` + goal
+    Goal: ` + goal;
 
     return systemPrompt;
 }
