@@ -11,7 +11,6 @@ const puppeteer = require( 'puppeteer' );
 const sharp = require( 'sharp' );
 const { ArgumentParser } = require( 'argparse' );
 const { DateTime } = require( 'luxon' );
-const { console } = require( 'console' );
 const actions = require( './actions' );
 const getSystemPrompt = require( './system_prompt' );
 const { installMouseHelper } = require( './mouse_helper' );
