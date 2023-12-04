@@ -2,11 +2,10 @@
 // Licensed under the MIT license.
 // The prompt that drives the AI.
 
-'use strict';
+"use strict";
 
-
-function getSystemPrompt( goal, actions ) {
-    let systemPrompt = `
+function getSystemPrompt(goal, actions) {
+  let systemPrompt = `
     You are going to test a website. You will be given a URL and a screenshot of the website.  
     You try to understand the screenshots content and layout. From that you determine what the next logical 
     action will be to reach the given goal below. 
@@ -30,11 +29,11 @@ function getSystemPrompt( goal, actions ) {
     The following actions are available:
 
     `;
-    for ( const action in actions ) {
-        systemPrompt += `${actions[action].getPromptInfo()}\n\n`;
-    }
+  for (const action in actions) {
+    systemPrompt += `${actions[action].getPromptInfo()}\n\n`;
+  }
 
-    systemPrompt += `
+  systemPrompt += `
     Some things to take into consideration:
     - If there is any cookiebar present, click it away first.
     - If you need to search and both a text input field and search icon or search button are next to eachother, start with a click on the text input field.
@@ -47,7 +46,7 @@ function getSystemPrompt( goal, actions ) {
 
     Goal: ${goal}`;
 
-    return systemPrompt;
+  return systemPrompt;
 }
 
 module.exports = getSystemPrompt;
