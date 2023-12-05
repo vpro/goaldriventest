@@ -26,15 +26,15 @@ function getVisibleAndClickableElements() {
   }
   const clickableElements = querySelectorDeep(selector);
 
-  // get rid of cookie consent first
+  /* get rid of cookie consent first
   const cookieConsent = document.getElementById("ccm_notification_host");
   if (
     cookieConsent &&
     window.getComputedStyle(cookieConsent).visibility !== "hidden" &&
     cookieConsent.shadowRoot
   ) {
-    // cookieConsent.shadowRoot.replaceChildren("");
-  }
+    cookieConsent.shadowRoot.replaceChildren("");
+  }*/
 
   // Maak een lijst van objecten met de coördinaten en het element, clear any old ones first if present
   const elementsCoordinates = [];
@@ -166,7 +166,6 @@ function querySelectorDeep(selector, rootNode = document.body) {
  * @returns element at the given x,y coordinates
  */
 function elementFromPointDeep(x, y) {
-  const depth = 0;
   let element = document.elementFromPoint(x, y);
   while (element?.shadowRoot) {
     const inner = element.shadowRoot.elementFromPoint(x, y);

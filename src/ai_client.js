@@ -90,23 +90,6 @@ class AIClient {
         .map((content) => content),
     }));
   }
-
-  // Helper functions to create prompts
-
-  /**
-   *
-   * @param {string} textPrompt
-   * @returns see processPrompt(...)
-   */
-  async processTextPrompt(textPrompt) {
-    const prompt = {
-      role: "user",
-      content: [{ type: "text", text: textPrompt }],
-    };
-    const response = await this.processPrompt(prompt);
-
-    return response;
-  }
 }
 
 class OpenAIClient extends AIClient {
@@ -158,7 +141,7 @@ class OpenAIClient extends AIClient {
 
     // We have success, now add the prompt to the prompt history and return the response
     this.storePrompt(prompt);
-    // todo: response can in the future also contan images or even more text...
+    // in the future the response can also contain images or even more text...
     const response = {
       role: "assistant",
       content: [{ type: "text", text: apiResponse.choices[0].message.content }],

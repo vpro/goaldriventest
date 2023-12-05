@@ -153,7 +153,7 @@ async function main() {
         headless: args.noheadless ? false : "new",
         args: ["--no-sandbox"],
       });
-      /* browser = await puppeteer.launch({
+      /* for docker browser = await puppeteer.launch({
                 executablePath: '/usr/bin/google-chrome',
                 args: [
                     '--disable-gpu',
