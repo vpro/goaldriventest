@@ -14,7 +14,7 @@ function contentToJson(content) {
   return JSON.parse(content.replace("```json\n", "").replace("\n```", ""));
 }
 
-// Todo: make the arguments for this function a little less ugly
+// Todo: make the arguments and the implementation of this function less ugly and with more checks
 function createReport(
   filename,
   promptMessages,

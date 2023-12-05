@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Copyright (c) Mathijn Elhorst.
 // Licensed under the MIT license.
 // Main file for the goal driven test

@@ -7,16 +7,15 @@
     "goaldriventest": "src/goaldriventest.js"
   },
   "scripts": {
-    "start": "node src/goaldriventest.js",
     "lint": "eslint src",
-    "prettier:check": "pnpm prettier --check src",
-    "prettier:write": "pnpm prettier --write src"
+    "prettier:check": "pnpm prettier --check src package.json",
+    "prettier:write": "pnpm prettier --write src package.json"
   },
   "repository": {
     "type": "git",
     "url": ".git"
   },
-  "author": "M. Elhorst",
+  "author": "M. Elhorst <m.elhorst@vpro.nl> www.vpro.nl",
   "license": "MIT",
   "files": [
     "*.json",
@@ -28,7 +27,6 @@
     "AI",
     "CLI",
     "automation",
-    "goal",
     "goaldriven",
     "goaldriventest",
     "goal-driven-test"
@@ -42,7 +40,7 @@
     "sharp": "^0.32.6"
   },
   "devDependencies": {
-     "eslint": "latest",
+    "eslint": "latest",
     "prettier": "latest",
     "eslint-config-prettier": "latest"
   }
