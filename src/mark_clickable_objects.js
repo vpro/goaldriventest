@@ -1,5 +1,6 @@
-// Copyright (c) Mathijn Elhorst.
+// Copyright (c) VPRO
 // Licensed under the MIT license.
+// Author: Mathijn Elhorst.
 //
 // This script will run in the browser to mark all clickable items with a number in a yellow circle.
 // It will also store an array of objects with the x,y,width and height of the element that will be used

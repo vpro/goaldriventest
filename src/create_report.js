@@ -1,5 +1,7 @@
-// Copyright (c) Mathijn Elhorst.
+// Copyright (c) VPRO
 // Licensed under the MIT license.
+// Author: Mathijn Elhorst.
+//
 // Contains the function to create a testing report in a fully self contained HTML file
 
 "use strict";

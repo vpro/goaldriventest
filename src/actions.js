@@ -1,5 +1,7 @@
-// Copyright (c) Mathijn Elhorst.
+// Copyright (c) VPRO
 // Licensed under the MIT license.
+// Author: Mathijn Elhorst.
+//
 // This file contains the logic for the "actions" that the AI can take.
 
 "use strict";

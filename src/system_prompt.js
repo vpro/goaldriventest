@@ -1,5 +1,7 @@
-// Copyright (c) Mathijn Elhorst.
+// Copyright (c) VPRO
 // Licensed under the MIT license.
+// Author: Mathijn Elhorst.
+//
 // The prompt that drives the AI.
 
 "use strict";

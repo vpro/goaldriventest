@@ -1,5 +1,7 @@
-// Copyright (c) Mathijn Elhorst.
+// Copyright (c) VPRO
 // Licensed under the MIT license.
+// Author: Mathijn Elhorst.
+//
 // This file provides the communication back and forth between the AI implementation
 
 "use strict";
