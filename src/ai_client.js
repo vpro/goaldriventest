@@ -6,8 +6,8 @@
 
 "use strict";
 
-const OpenAI = require("openai");
-const fs = require("fs");
+import OpenAI from "openai";
+import fs from "fs";
 
 // Chose to keep it a simple client where you pass in multiple prompts and get back multiple responses
 // format of in- and output is the same: { role: string, content: [ { type: "text", text: string } / { type: "image_url", image_url: string } ] }
@@ -202,7 +202,7 @@ class AIPlaybackClient extends AIClient {
   }
 }
 
-module.exports = {
+export {
   AIClient,
   OpenAIClient,
   AIPlaybackClient,

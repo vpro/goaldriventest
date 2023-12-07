@@ -51,4 +51,4 @@ function getSystemPrompt(goal, actions) {
   return systemPrompt;
 }
 
-module.exports = getSystemPrompt;
+export { getSystemPrompt };

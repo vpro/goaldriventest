@@ -5,7 +5,8 @@ module.exports = {
     "import/no-default-export": "off",
   },
   parserOptions: {
-    ecmaVersion: 2024
+    ecmaVersion: 2024,
+	sourceType: "module"
   },
   env: {
     node: true,

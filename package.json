@@ -2,6 +2,10 @@
   "name": "goaldriventest",
   "version": "0.0.1",
   "description": "Ask AI to test your website with a specific goal",
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "type": "module",
   "main": "src/goaldriventest.js",
   "bin": {
     "goaldriventest": "src/goaldriventest.js"

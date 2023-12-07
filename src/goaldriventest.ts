@@ -1,22 +1,20 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsnode
 // Copyright (c) Mathijn Elhorst.
 // Licensed under the MIT license.
 // Main file for the goal driven test
 // This file contains the main function that runs the test
 
-"use strict";
-
 import fs from "fs";
-import { KnownDevices } from "puppeteer";
-import puppeteer from "puppeteer";
+import axios from "axios";
+import puppeteer, { Page } from "puppeteer";
 import sharp from "sharp";
 import { ArgumentParser } from "argparse";
 import { DateTime } from "luxon";
-import { actions } from "./actions.js";
-import { getSystemPrompt } from "./system_prompt.js";
-import { installMouseHelper } from "./mouse_helper.js";
-import { createReport } from "./create_report.js";
-import { OpenAIClient, AIPlaybackClient } from "./ai_client.js";
+import { actions } from "./actions";
+import { getSystemPrompt } from "./system_prompt";
+import { installMouseHelper } from "./mouse_helper";
+import { createReport } from "./create_report";
+import { OpenAIClient, AIPlaybackClient } from "./ai_client";
 
 // Set up OpenAI
 const { OPENAI_API_KEY } = process.env;
@@ -33,16 +31,22 @@ const USE_ELEMENT_NUMBERS_FOR_CLICK = true;
 const ELEMENT_NUMBERS_SELECTOR =
   'a, button, use, select, input, [role="button"], [tabindex]:not([tabindex="-1"]';
 
-async function getScreenshot(page, markClickableObjects = true) {
+async function getScreenshot(
+  page: Page,
+  markClickableObjects = true
+): Promise<string> {
   if (markClickableObjects) {
     // Label all clickable elements
     let scriptContents = fs.readFileSync(
       "src/mark_clickable_objects.js",
-      "utf8",
+      "utf8"
     );
     scriptContents += `\nwindow.goal_driven_test_element_override_selector='${ELEMENT_NUMBERS_SELECTOR}';\n`;
     await page.evaluate(scriptContents);
   }
+
+  // make the mouse visible
+  // installMouseHelper(page);
 
   // Make a screenshot
   const screenshotBinary = await page.screenshot({
@@ -65,7 +69,7 @@ async function getScreenshot(page, markClickableObjects = true) {
 
 // Main function
 async function main() {
-  let browser;
+  let browser: puppeteer.Browser | undefined;
   try {
     // Argument parsing
     const parser = new ArgumentParser();
@@ -117,8 +121,8 @@ async function main() {
     if (args.list) {
       console.log(
         `Possible devices to simulate:\n${Object.keys(
-          KnownDevices,
-        ).join("\n")}`,
+          puppeteer.devices
+        ).join("\n")}`
       );
 
       return;
@@ -131,11 +135,11 @@ async function main() {
       console.log(
         `Playback from file: ${
           args.playback
-        } steps: ${aiAPI.getNumberOfSteps()}`,
+        } steps: ${aiAPI.getNumberOfSteps()}`
       );
       if (args.maxsteps > aiAPI.getNumberOfSteps()) {
         console.log(
-          `Info: maxsteps is larger than the number of steps in the playback file, setting maxsteps to ${aiAPI.getNumberOfSteps()}`,
+          `Info: maxsteps is larger than the number of steps in the playback file, setting maxsteps to ${aiAPI.getNumberOfSteps()}`
         );
         args.maxsteps = aiAPI.getNumberOfSteps();
       }
@@ -171,7 +175,7 @@ async function main() {
     }
 
     const page = await browser.newPage();
-    await page.emulate(KnownDevices[args.emulate]);
+    await page.emulate(puppeteer.devices[args.emulate]);
     if (args.stealth) {
       /* add for sites that block headless browsers */
       await page.setExtraHTTPHeaders({
@@ -184,9 +188,6 @@ async function main() {
         "accept-language": "en-US,en;q=0.9,en;q=0.8",
       });
     }
-    // make the mouse visible
-    installMouseHelper(page);
-
     const navigateResult = await page.goto(args.url);
     if (!navigateResult.ok()) {
       throw new Error("Could not navigate to URL");
@@ -198,8 +199,8 @@ async function main() {
     console.log(`Goal: "${args.goal}"`);
     console.log(`Max steps: ${args.maxsteps}`);
 
-    const screenshots = [];
-    const actionResults = [];
+    const screenshots: string[] = [];
+    const actionResults: string[] = [];
 
     await new Promise((resolve) => setTimeout(resolve, BROWSER_DELAY_MSECS));
     screenshots.push(await getScreenshot(page, USE_ELEMENT_NUMBERS_FOR_CLICK));
@@ -241,8 +242,8 @@ async function main() {
           `API response doesn't contain JSON, response: ${JSON.stringify(
             content,
             null,
-            4,
-          )}`,
+            4
+          )}`
         );
       }
 
@@ -268,14 +269,14 @@ async function main() {
         actionResults.push(actionResult);
         console.log(`Taking action: ${actionResult}`);
         await new Promise((resolve) =>
-          setTimeout(resolve, BROWSER_DELAY_MSECS),
+          setTimeout(resolve, BROWSER_DELAY_MSECS)
         );
       } else {
         achieved = true;
       }
 
       screenshots.push(
-        await getScreenshot(page, USE_ELEMENT_NUMBERS_FOR_CLICK),
+        await getScreenshot(page, USE_ELEMENT_NUMBERS_FOR_CLICK)
       );
 
       if (args.store && args.store != args.playback) {
@@ -288,7 +289,7 @@ async function main() {
         screenshots,
         actionResults,
         args,
-        startime,
+        startime
       );
 
       step += 1;
@@ -300,7 +301,9 @@ async function main() {
     } else {
       process.exitCode = 1;
       if (step > args.maxsteps) {
-        console.log(`Maximum number of steps (${args.maxsteps}) reached.`);
+        console.log(
+          `Maximum number of steps (${args.maxsteps}) reached.`
+        );
       }
       console.log("Goal not achieved.");
     }

@@ -97,6 +97,8 @@ class Action {
  *
  */
 
+const MOVE_STEPS = { steps: 10 };
+
 /**
  * The ClickAction class is the action that is performed when the AI wants to click on an element
  */
@@ -113,6 +115,7 @@ class ClickAction extends Action {
     const xy = await this.getXY(page, actionPayload);
     const info = `Clicking at ${xy?.x}, ${xy?.y}`;
     if (xy !== undefined) {
+      await page.mouse.move(xy.x, xy.y, MOVE_STEPS);  // first move to the element
       await page.mouse.click(xy.x, xy.y);
     }
 
@@ -159,7 +162,7 @@ class ScrollAction extends Action {
 
       xy = { x: size.width / 2, y: size.height / 2 };
     }
-    await page.mouse.move(xy.x, xy.y);
+    await page.mouse.move(xy.x, xy.y, MOVE_STEPS);
 
     let distanceX;
     let distanceY;
@@ -324,4 +327,4 @@ const actions = {
   input: new InputAction(),
 };
 
-module.exports = actions;
+export { actions };

@@ -18,9 +18,9 @@ async function installMouseHelper(page) {
         styleElement.innerHTML = `
         puppeteer-mouse-pointer {
           pointer-events: none;
-          position: absolute;
+          position: fixed;
           top: 0;
-          z-index: 10000;
+          z-index: 999999999999;
           left: 0;
           width: 20px;
           height: 20px;
@@ -90,4 +90,4 @@ async function installMouseHelper(page) {
   });
 }
 
-module.exports = { installMouseHelper };
+export { installMouseHelper };

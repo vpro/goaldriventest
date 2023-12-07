@@ -6,9 +6,9 @@
 
 "use strict";
 
-const { DateTime } = require("luxon");
-const fs = require("fs");
-const actions = require("./actions");
+import fs from "fs";
+import { DateTime } from "luxon";
+import { actions } from "./actions.js";
 
 function contentToJson(content) {
   return JSON.parse(content.replace("```json\n", "").replace("\n```", ""));
@@ -338,4 +338,4 @@ function createReport(
   }
 }
 
-module.exports = { createReport };
+export { createReport };
