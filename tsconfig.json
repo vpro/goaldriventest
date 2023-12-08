@@ -6,12 +6,10 @@
     "outDir": "build",                          
     "rootDir": "src",
     "strict": true,         
-    "noImplicitAny": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "sourceMap": true,
     "allowJs": true,
    },
-   "include": ["src/**/*.ts"],
-   "exclude": ["node_modules"]
+   "include": ["src"]
 }
