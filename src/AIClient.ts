@@ -4,9 +4,7 @@
 //
 // This file provides the communication back and forth between the AI implementation
 
-"use strict";
-
-import OpenAI from "openai";
+import { OpenAI, OpenAIError } from "openai";
 import fs from "fs";
 
 // Chose to keep it a simple client where you pass in multiple prompts and get back multiple responses
@@ -16,16 +14,18 @@ import fs from "fs";
 // The input format is the same as OpenAI's chat API, but the output format is different
 // Let's see how long this holds...
 
+export interface Prompt {
+  role: string;
+  content: Array<{ type: string; text?: string; image_url?: { url: string } }>;
+}
+
 class AIClient {
-  #promptHistory = [];
+  private _promptHistory: Prompt[] = [];
 
   /**
-   * Function that passes the prompt to the AI and returns the responsem, both in the same format.
-   *
-   * @param {object} prompt { role: string, content: [ { type: "text", text: string } / { type: "image_url", image_url: string } ] }
-   * @returns {object} { role: string, content: [ { type: "text", text: string } / { type: "image_url", image_url: string } ] }
+   * Function that passes the prompt to the AI and returns the response
    */
-  async processPrompt(prompt) {
+  async processPrompt(prompt: Prompt): Promise<Prompt> {
     throw new Error("Must be implemented by subclass");
   }
 
@@ -33,8 +33,8 @@ class AIClient {
    * Add system prompt for the initial prompt initialization
    * There is no response for this prompt, it will be sent as part of history for the next prompt
    */
-  async addSystemPrompt(textPrompt) {
-    const prompt = {
+  async addSystemPrompt(textPrompt: string): Promise<void> {
+    const prompt: Prompt = {
       role: "system",
       content: [{ type: "text", text: textPrompt }],
     };
@@ -44,33 +44,31 @@ class AIClient {
   /**
    * Function that returns the current prompt history.
    */
-  getPromptHistory() {
-    return this.#promptHistory;
+  getPromptHistory(): Prompt[] {
+    return this._promptHistory;
   }
 
   /**
    * Function that clears the current prompt history.
    */
-  clearPromptHistory() {
-    this.#promptHistory = [];
+  clearPromptHistory(): void {
+    this._promptHistory = [];
   }
 
   /**
    * Function that stores a prompt in the prompt history.
-   * @param {object} prompt { role: string, content: [ { type: "text", text: string } / { type: "image_url", image_url: string } ] }
-   * @returns - nothing
    */
-  storePrompt(prompt) {
-    this.#promptHistory.push(prompt);
+  storePrompt(prompt: Prompt): void {
+    this._promptHistory.push(prompt);
   }
 
   /**
    * Function that writes all prompts to a file
    */
-  writePromptHistoryToFile(filename) {
+  writePromptHistoryToFile(filename: string): void {
     const file = fs.openSync(filename, "w");
     if (file !== undefined) {
-      fs.writeSync(file, JSON.stringify(this.#promptHistory, null, 4));
+      fs.writeSync(file, JSON.stringify(this._promptHistory, null, 4));
       fs.closeSync(file);
     } else {
       throw new Error(
@@ -82,8 +80,8 @@ class AIClient {
   /**
    * Function that returns the prompt history rewritten to contain only text
    */
-  getPromptHistoryTextOnly() {
-    return this.#promptHistory.map((prompt) => ({
+  getPromptHistoryTextOnly(): Prompt[] {
+    return this._promptHistory.map((prompt) => ({
       role: prompt.role,
       content: prompt.content
         .filter((content) => content.type === "text")
@@ -93,13 +91,13 @@ class AIClient {
 }
 
 class OpenAIClient extends AIClient {
-  #openaiAPI = null;
+  private _openaiAPI: OpenAI;
 
-  #openaiModel = "gpt-4-vision-preview";
+  private _openaiModel = "gpt-4-vision-preview";
 
-  #maxTokens = 350;
+  private _maxTokens = 350;
 
-  constructor(key, openaiModel, maxTokens) {
+  constructor(key: string, openaiModel: string, maxTokens: number) {
     super();
 
     if (!key || key.length === 0) {
@@ -108,31 +106,33 @@ class OpenAIClient extends AIClient {
       );
     }
 
-    this.#openaiModel = openaiModel;
-    this.#maxTokens = maxTokens;
-    this.#openaiAPI = new OpenAI({
+    this._openaiModel = openaiModel;
+    this._maxTokens = maxTokens;
+    this._openaiAPI = new OpenAI({
       apiKey: key,
     });
   }
 
-  async processPrompt(prompt) {
+  async processPrompt(prompt: Prompt): Promise<Prompt> {
     const tempPromptMessages = this.getPromptHistoryTextOnly();
     console.log(`Prompt: ${JSON.stringify(tempPromptMessages, null, 4)}`);
     tempPromptMessages.push(prompt);
 
-    const apiResponse = await this.#openaiAPI.chat.completions.create({
-      messages: tempPromptMessages,
-      max_tokens: this.#maxTokens,
-      model: this.#openaiModel,
+    const apiResponse = await this._openaiAPI.chat.completions.create({
+      messages: tempPromptMessages as any,
+      max_tokens: this._maxTokens,
+      model: this._openaiModel,
     });
 
     if (apiResponse.choices.length === 0) {
       throw new Error("No response from OpenAI");
     }
-    if (apiResponse.choices[0].finish_details.type !== "stop") {
+    if ((apiResponse.choices[0] as any).finish_details.type !== "stop") {
       console.log(`Failure: ${apiResponse}`);
       throw new Error(
-        `OpenAI did not finish but gave as failure reason: ${apiResponse.choices[0].finish_details.type}`,
+        `OpenAI did not finish but gave as failure reason: ${
+          (apiResponse.choices[0] as any).finish_details.type
+        }`,
       );
     }
     if (!apiResponse.choices[0].message.content) {
@@ -158,33 +158,33 @@ class OpenAIClient extends AIClient {
  *
  */
 class AIPlaybackClient extends AIClient {
-  #recordedPrompts = [];
+  private _recordedPrompts: Prompt[];
 
-  constructor(filename) {
+  constructor(filename: string) {
     super();
 
-    this.#recordedPrompts = this.#readPrompts(filename);
+    this._recordedPrompts = this._readPrompts(filename);
   }
 
-  getNumberOfSteps() {
-    return this.#recordedPrompts.length;
+  getNumberOfSteps(): number {
+    return this._recordedPrompts.length;
   }
 
-  async processPrompt(prompt) {
-    if (this.#recordedPrompts.length == 0) {
+  async processPrompt(prompt: Prompt): Promise<Prompt> {
+    const recordedPrompt = this._recordedPrompts.shift();
+    if (!recordedPrompt) {
       throw new Error("No more recorded prompts available");
     }
-    const recordedPrompt = this.#recordedPrompts.shift();
     this.storePrompt(prompt);
     this.storePrompt(recordedPrompt);
 
     return recordedPrompt;
   }
 
-  #readPrompts(filename) {
+  private _readPrompts(filename: string): Prompt[] {
     const allmessages = JSON.parse(fs.readFileSync(filename, "utf8"));
     const messages = allmessages.filter(
-      (promptMessage) => promptMessage.role === "assistant",
+      (promptMessage: any) => promptMessage.role === "assistant",
     );
     // if old format, convert to new format
     if (
@@ -192,7 +192,7 @@ class AIPlaybackClient extends AIClient {
       messages[0].content !== undefined &&
       messages[0].content[0].type === undefined
     ) {
-      return messages.map((promptMessage) => ({
+      return messages.map((promptMessage: any) => ({
         role: promptMessage.role,
         content: [{ type: "text", text: promptMessage.content }],
       }));
@@ -202,8 +202,4 @@ class AIPlaybackClient extends AIClient {
   }
 }
 
-export {
-  AIClient,
-  OpenAIClient,
-  AIPlaybackClient,
-};
+export { AIClient, OpenAIClient, AIPlaybackClient };

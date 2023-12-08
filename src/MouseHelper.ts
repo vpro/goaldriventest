@@ -1,10 +1,12 @@
 // This injects a box into the page that moves with the mouse;
 // Useful for debugging
-// See https://gist.github.com/aslushnikov/94108a4094532c7752135c42e12a00eb
+// Original version can be found here: https://gist.github.com/aslushnikov/94108a4094532c7752135c42e12a00eb
 
 "use strict";
 
-async function installMouseHelper(page) {
+import { Page } from "puppeteer";
+
+async function installMouseHelper(page: Page): Promise<void> {
   await page.evaluateOnNewDocument(() => {
     // Install mouse helper only for top-level frame.
     if (window !== window.parent) {
@@ -79,9 +81,9 @@ async function installMouseHelper(page) {
           },
           true,
         );
-        function updateButtons(buttons) {
+        function updateButtons(buttons: number) {
           for (let i = 0; i < 5; i++) {
-            box.classList.toggle(`button-${i}`, buttons & (1 << i));
+            box.classList.toggle(`button-${i}`, Boolean(buttons & (1 << i)));
           }
         }
       },

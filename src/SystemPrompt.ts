@@ -6,7 +6,9 @@
 
 "use strict";
 
-function getSystemPrompt(goal, actions) {
+import { Action } from "./BrowserActions.js";
+
+function getSystemPrompt(goal: string, actions: Action[]) {
   let systemPrompt = `
     You are going to test a website. You will be given a URL and a screenshot of the website.  
     You try to understand the screenshots content and layout. From that you determine what the next logical 
@@ -31,9 +33,10 @@ function getSystemPrompt(goal, actions) {
     The following actions are available:
 
     `;
-  for (const action in actions) {
-    systemPrompt += `${actions[action].getPromptInfo()}\n\n`;
-  }
+
+  actions.forEach(
+    (action) => (systemPrompt += `${action.getPromptInfo()}\n\n`),
+  );
 
   systemPrompt += `
     Some things to take into consideration:

@@ -6,14 +6,24 @@
     "sourceType": "module"
   },
   "type": "module",
-  "main": "src/goaldriventest.js",
   "bin": {
-    "goaldriventest": "src/goaldriventest.js"
+    "goaldriventest": "build/GoalDrivenTest.js"
   },
   "scripts": {
-    "lint": "eslint src",
-    "prettier:check": "pnpm prettier --check src package.json",
-    "prettier:write": "pnpm prettier --write src package.json"
+    "build": "npm run clean && npx tsc && chmod +x build/GoalDrivenTest.js",
+    "tsx": "npx tsx src/GoalDrivenTest.ts",
+    "clean": "rm -rf build",
+    "distclean": "rm -rf node_modules build package-lock.json",
+    "prettier:check": "npx prettier --check ",
+    "prettier:write": "npx prettier --write "
+  },
+  "scriptsComments": {
+    "build": "Build the project",
+    "tsx": "Use tsx to run GoalDrivenTest.ts directly. Pass it arguments after --. For example: npm run tsx -- --help",
+    "clean": "Remove build directory",
+    "distclean": "Remove build directory and node_modules",
+    "prettier:check": "Check if files are formatted according to prettier. Add directories or files as arguments. For example: npm run prettier:check src",
+    "prettier:write": "Format files according to prettier. Add directories or files as arguments. For example: npm run prettier:write src"
   },
   "repository": {
     "type": "git",
@@ -37,15 +47,18 @@
   ],
   "dependencies": {
     "argparse": "^2.0.1",
-    "axios": "^1.6.1",
     "luxon": "^3.4.4",
     "openai": "^4.17.4",
     "puppeteer": "^21.5.1",
     "sharp": "^0.32.6"
   },
   "devDependencies": {
+    "@types/argparse": "^2.0.14",
+    "@types/luxon": "^3.3.7",
+    "@types/node": "^20.10.4",
     "eslint": "latest",
+    "eslint-config-prettier": "latest",
     "prettier": "latest",
-    "eslint-config-prettier": "latest"
+    "typescript": "^5.3.3"
   }
 }

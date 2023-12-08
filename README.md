@@ -29,6 +29,7 @@ Before you can harness the power of GoalDrivenTest, you need to get it up and ru
 **Prerequisites:**
 - nodejs
 - npm
+- OpenAI API key
 
 **Step-by-Step Installation:**
 1. Clone the repository to your local machine:
@@ -41,7 +42,20 @@ Before you can harness the power of GoalDrivenTest, you need to get it up and ru
    ```
 3. Install the necessary dependencies:
    ```
-   npm install 
+   npm install
+   ```
+4. Build for execution
+   ```
+   npm run build
+   ```
+5. Be able to run as 'goaldriventest' from the commandline:
+   ```
+   npm install -g
+   ```
+   
+Typescript compilation in step 4 and 5 can be skipped and the program can be run directly using tsx also:
+   ```
+   npm run tsx -- 
    ```
 
 ## Usage

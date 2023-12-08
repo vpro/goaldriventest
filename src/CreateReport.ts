@@ -8,21 +8,23 @@
 
 import fs from "fs";
 import { DateTime } from "luxon";
-import { actions } from "./actions.js";
+import { actionFactoryInstance } from "./BrowserActions.js";
+import { Prompt } from "./AIClient.js";
 
-function contentToJson(content) {
+// todo: fix this any
+function contentToJson(content: string): any {
   return JSON.parse(content.replace("```json\n", "").replace("\n```", ""));
 }
 
 // Todo: make the arguments and the implementation of this function less ugly and with more checks
 function createReport(
-  filename,
-  promptMessages,
-  screenshots,
-  actionResults,
-  args,
-  startime,
-) {
+  filename: string,
+  promptMessages: Prompt[],
+  screenshots: string[],
+  actionResults: string[],
+  args: any,
+  startime: DateTime,
+): void {
   let htmlContent = `<!DOCTYPE html>
 	<html lang="en">
 	<head>
@@ -197,6 +199,14 @@ function createReport(
 		<div class="container">
 	`;
 
+  let goalAchieved = false;
+  if (promptMessages.length > 0) {
+    let lastPrompt = promptMessages[promptMessages.length - 1];
+    if (lastPrompt && lastPrompt.content[0] && lastPrompt.content[0].text) {
+      let lastJsonData = contentToJson(lastPrompt.content[0].text);
+      goalAchieved = lastJsonData.achieved;
+    }
+  }
   htmlContent += `
     <div class="step">
         <div class="intro">
@@ -206,14 +216,7 @@ function createReport(
             <p>Start time: ${startime.toFormat("yyyy-LL-dd HH:mm:ss")}</p>
             <p>End time: ${DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss")}</p>
             <p>Number of steps: ${screenshots.length - 1}</p>
-            <p>Goal achieved: ${
-              promptMessages.length > 0 &&
-              contentToJson(
-                promptMessages[promptMessages.length - 1].content[0].text,
-              ).achieved
-                ? "Yes"
-                : "No"
-            }</p>
+            <p>Goal achieved: ${goalAchieved ? "Yes" : "No"}</p>
             <p>Browser: ${args.browser}</p>
             <p>Device: ${args.emulate}</p>
         </div>
@@ -228,19 +231,33 @@ function createReport(
   for (let i = 0; i < promptMessages.length; i++) {
     const promptMessage = promptMessages[i];
 
-    if (promptMessage.role === "assistant") {
-      const jsonData = contentToJson(promptMessage.content[0].text);
-      let nextJsonData;
+    if (promptMessage && promptMessage.role === "assistant") {
+      const jsonData = contentToJson(
+        promptMessage.content[0] && promptMessage.content[0].text
+          ? promptMessage.content[0].text
+          : "",
+      );
+      // todo: fix this any
+      let nextJsonData: any = undefined;
       for (let j = i + 1; j < promptMessages.length; j++) {
         if (promptMessages[j].role === "assistant") {
-          nextJsonData = contentToJson(promptMessages[j].content[0].text);
-          break;
+          let nextPromptMessage = promptMessages[j];
+          if (
+            nextPromptMessage &&
+            nextPromptMessage.content[0] &&
+            nextPromptMessage.content[0].text
+          ) {
+            nextJsonData = contentToJson(nextPromptMessage.content[0].text);
+            break;
+          }
         }
       }
       const actionPayload = jsonData.action;
       let actionHtml = "";
       if (actionPayload?.actionType) {
-        const action = actions[actionPayload.actionType];
+        const action = actionFactoryInstance.getAction(
+          actionPayload.actionType,
+        );
         if (!action) {
           throw new Error(`Action ${actionPayload.actionType} not recognized`);
         }
