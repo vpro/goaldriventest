@@ -23,7 +23,7 @@ import {
 } from "./AIClient.js";
 
 // Set up OpenAI
-const OPENAI_API_KEY = process.env["OPENAI_API_KEY"] || "";
+const OPENAI_API_KEY = process.env["OPENAI_API_KEY"] ?? "";
 const OPENAI_MAX_TOKENS = 350;
 const OPENAI_MODEL = "gpt-4-vision-preview";
 
@@ -65,16 +65,6 @@ async function getScreenshot(
     .toBuffer();
 
   return screenshotBuf.toString("base64");
-}
-
-function GetDevice(deviceName: string): puppeteer.Device {
-  const name = deviceName;
-  const device = KnownDevices[name as keyof typeof KnownDevices];
-  if (device === undefined) {
-    throw new Error(`Device ${deviceName} not found`);
-  }
-
-  return device;
 }
 
 // Main function
@@ -217,7 +207,7 @@ async function main() {
     }
 
     const navigateResult = await page.goto(args.url);
-    if (!navigateResult || !navigateResult.ok()) {
+    if (!navigateResult?.ok()) {
       throw new Error("Could not navigate to URL");
     }
 
@@ -316,8 +306,8 @@ async function main() {
       createReport(
         args.filename,
         aiAPI.getPromptHistory(),
-        screenshots,
         actionResults,
+        screenshots,
         args,
         startime,
       );
