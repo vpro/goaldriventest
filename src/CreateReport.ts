@@ -11,21 +11,194 @@ import { DateTime } from "luxon";
 import { actionFactoryInstance } from "./BrowserActions.js";
 import { Prompt } from "./AIClient.js";
 
-// todo: fix this any
-function contentToJson(content: string): any {
-  return JSON.parse(content.replace("```json\n", "").replace("\n```", ""));
+// Todo: make this function check for the correct format 
+// Function that takes the text content of a prompt and returns the json inside. Can throw an error if the format is not correct
+function contentToJson(prompt: Prompt): any {
+  let json;
+  if (prompt?.content[0]?.text) {
+    json = JSON.parse(prompt.content[0].text.replace("```json\n", "").replace("\n```", ""));
+  }
+  return json;
+}
+
+function contentToScreenshot(prompt: Prompt): string {
+  let screenshot = "";
+  if (prompt?.content[1]?.image_url) {
+    screenshot = prompt.content[1].image_url.url.replace("data:image/png;base64,", "").replace("data:image/jpeg;base64,", "");
+  }
+  return screenshot;
 }
 
 // Todo: make the arguments and the implementation of this function less ugly and with more checks
 function createReport(
   filename: string,
   promptMessages: Prompt[],
-  screenshots: string[],
   actionResults: string[],
+  screenshots: string[],
   args: any,
   startime: DateTime,
 ): void {
-  let htmlContent = `<!DOCTYPE html>
+
+  let jsonActions = promptMessages.flatMap(prompt => prompt.role === "assistant" ? [contentToJson(prompt)] : []);
+
+  console.log("jsonActions", jsonActions.length);
+  console.log("screenshots", screenshots.length);
+  console.log("actionResults", actionResults.length);
+
+  if (jsonActions.length < 1) {
+    throw new Error("Internal error: No actions found");
+  }
+  if (jsonActions.length < actionResults.length) {
+    throw new Error("Internal error: Number of actions and number of action results do not match");
+  }
+  if (screenshots.length < jsonActions.length) {
+    throw new Error("Internal error: Number of screenshots unexpected");
+  }
+  
+  let htmlContent = `
+  <html>
+  ${getHeader()}
+  <body>
+  <div class="container">`;
+
+  // Introductory part
+  htmlContent += `
+    <div class="step">
+        <div class="intro">
+            <h1>Goal:</h1>
+            <p><strong>${args.goal}</strong></p>
+            <p>URL: <a href="${args.url}">${args.url}</a></p>
+            <p>Start time: ${startime.toFormat("yyyy-LL-dd HH:mm:ss")}</p>
+            <p>End time: ${DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss")}</p>
+            <p>Number of steps: ${jsonActions.length}</p>
+            <p>Goal achieved: ${jsonActions[jsonActions.length - 1].achieved ? "Yes" : "No"}</p>
+            <p>Browser: ${args.browser}</p>
+            <p>Device: ${args.emulate}</p>
+        </div>
+        <div class="image" onclick="toggleFullscreen(this)">
+            <img src="data:image/png;base64,${
+              screenshots[0]
+            }" alt="Starting screenshot" />
+        </div>
+    </div>`;
+
+  jsonActions.forEach((jsonAction, step) => {
+    let nextJsonAction = jsonActions[step + 1];
+    htmlContent += getStepReport (step, jsonAction, nextJsonAction, actionResults[step], screenshots[step + 1]);
+  });
+
+  htmlContent += `
+		</div>
+	</body>
+	</html>
+	`;
+
+  const file = fs.openSync(filename, "w");
+  if (file !== undefined) {
+    fs.writeSync(file, htmlContent);
+    fs.closeSync(file);
+  }
+}
+
+function getStepReport (step: number, stepJsonData: any, nextStepJsonData: any, actionResult: string, screenshot: string) : string {
+
+  const actionPayload = stepJsonData.action;
+  let actionHtml = "";
+  if (actionPayload?.actionType) {
+    const action = actionFactoryInstance.getAction(
+      actionPayload.actionType,
+    );
+    if (!action) {
+      throw new Error(`Action ${actionPayload.actionType} not recognized`);
+    }
+    actionHtml = `<div class="action">
+                    ${action.getDescriptionHTML(actionPayload)}
+                    <p><b>Action result:</b> <span id="actionResult">${
+                      actionResult
+                    }</span></p>                
+                </div>`;
+  }
+
+  let htmlContent = `
+        <div class="step-count">
+            <h2>Step ${step + 1}</h2>
+        </div>
+        <div class="step">
+             <div class="action-card">                    
+                ${actionHtml}
+                <p><b>Description:</b> <span id="description">${
+                  stepJsonData.description
+                }</span></p>`;
+
+  if (nextStepJsonData) {
+    htmlContent += `<p/>
+                <p><b>Url:</b> 
+                  <span id="url"><a href="${
+                      nextStepJsonData.url
+                    }">${nextStepJsonData.url}</a>
+                  </span>
+                </p>
+
+                <p><b>Expectation:</b> 
+                  <span id="${
+                    nextStepJsonData.expectationSatisfied
+                      ? "expectation-success"
+                      : "expectation-failed"
+                    }">
+                    ${nextStepJsonData.previousExpectation}
+                  </span>
+                </p>
+
+                <div class="frustration-level">
+                    <b>Frustration Level:</b>
+                    <my-dial level="${
+                        nextStepJsonData.frustrationLevel
+                      }">
+                    </my-dial>
+                    <span id="frustrationLevel">${
+                        nextStepJsonData.frustrationLevel
+                      }
+                    </span>
+                </div>
+
+                <p><b>Frustration Level Reason:</b> <span id="frustrationLevelReason">${
+                    nextStepJsonData.frustrationLevelReason
+                  }.</span>
+                </p>`;
+  } else {
+    // This is the last step. We don't know the result of the expectation as we didn't ask the AI, except if the goal was achieved
+    htmlContent += `
+                <p/>
+                <p><b>Expectation:</b> <span id=${
+                    stepJsonData.achieved ? "expectation-success" : "expectation"
+                  }}">${stepJsonData.expectation}</span>
+                </p>`;
+    if (stepJsonData.achieved) {
+      htmlContent += "<p><b>Goal achieved!</b> 🎉</p>";
+    }
+  }
+
+  htmlContent += `
+            </div>
+            <div class="image" onclick="toggleFullscreen(this)">
+                <img src="data:image/png;base64,${
+                  screenshot
+                }" alt="Screenshot ${step + 1}" />
+            </div>
+        </div>`;
+
+  // Debug only, marked with display: none in the style
+  htmlContent += `<div class="json"><pre>{${JSON.stringify(
+    stepJsonData,
+    null,
+    4,
+  )}}</pre></div>`;
+
+  return htmlContent;
+}
+
+function getHeader () : string {
+  return `<!DOCTYPE html>
 	<html lang="en">
 	<head>
 		<meta charset="UTF-8">
@@ -119,9 +292,8 @@ function createReport(
                 color: red;
             }            
 		</style>
-	</head>
-	<body>
-        <script>
+
+    <script>
         class Dial extends HTMLElement {
             constructor() {
                 super();
@@ -195,164 +367,13 @@ function createReport(
         // Define the new element
         customElements.define('my-dial', Dial);
         
-        </script>        
-		<div class="container">
+        // Toggle for the fullscreen images
+        function toggleFullscreen(element) {
+          element.classList.toggle('fullscreen');
+        }
+    </script>      
+	</head> 
 	`;
-
-  let goalAchieved = false;
-  if (promptMessages.length > 0) {
-    let lastPrompt = promptMessages[promptMessages.length - 1];
-    if (lastPrompt && lastPrompt.content[0] && lastPrompt.content[0].text) {
-      let lastJsonData = contentToJson(lastPrompt.content[0].text);
-      goalAchieved = lastJsonData.achieved;
-    }
-  }
-  htmlContent += `
-    <div class="step">
-        <div class="intro">
-            <h1>Goal:</h1>
-            <p><strong>${args.goal}</strong></p>
-            <p>URL: <a href="${args.url}">${args.url}</a></p>
-            <p>Start time: ${startime.toFormat("yyyy-LL-dd HH:mm:ss")}</p>
-            <p>End time: ${DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss")}</p>
-            <p>Number of steps: ${screenshots.length - 1}</p>
-            <p>Goal achieved: ${goalAchieved ? "Yes" : "No"}</p>
-            <p>Browser: ${args.browser}</p>
-            <p>Device: ${args.emulate}</p>
-        </div>
-        <div class="image" onclick="toggleFullscreen(this)">
-            <img src="data:image/png;base64,${
-              screenshots[0]
-            }" alt="Starting screenshot" />
-        </div>
-    </div>`;
-
-  let step = 0;
-  for (let i = 0; i < promptMessages.length; i++) {
-    const promptMessage = promptMessages[i];
-
-    if (promptMessage && promptMessage.role === "assistant") {
-      const jsonData = contentToJson(
-        promptMessage.content[0] && promptMessage.content[0].text
-          ? promptMessage.content[0].text
-          : "",
-      );
-      // todo: fix this any
-      let nextJsonData: any = undefined;
-      for (let j = i + 1; j < promptMessages.length; j++) {
-        if (promptMessages[j].role === "assistant") {
-          let nextPromptMessage = promptMessages[j];
-          if (
-            nextPromptMessage &&
-            nextPromptMessage.content[0] &&
-            nextPromptMessage.content[0].text
-          ) {
-            nextJsonData = contentToJson(nextPromptMessage.content[0].text);
-            break;
-          }
-        }
-      }
-      const actionPayload = jsonData.action;
-      let actionHtml = "";
-      if (actionPayload?.actionType) {
-        const action = actionFactoryInstance.getAction(
-          actionPayload.actionType,
-        );
-        if (!action) {
-          throw new Error(`Action ${actionPayload.actionType} not recognized`);
-        }
-        actionHtml = `<div class="action">
-                    ${action.getDescriptionHTML(actionPayload)}
-                    <p><b>Action result:</b> <span id="actionResult">${
-                      actionResults[step]
-                    }</span></p>                
-                    </div>`;
-      }
-
-      htmlContent += `
-            <div class="step-count">
-                <h2>Step ${step + 1}</h2>
-            </step-count>
-            <div class="step">
-                 <div class="action-card">                    
-                    ${actionHtml}
-                    <p><b>Description:</b> <span id="description">${
-                      jsonData.description
-                    }</span></p>`;
-
-      if (nextJsonData) {
-        if (nextJsonData.previousExpectation != jsonData.expectation) {
-          console.log(
-            "Warning: previousExpectation is not the same as the current expectation",
-          );
-        }
-        htmlContent += `<p/>
-                    <p><b>Url:</b> <span id="url"><a href="${
-                      nextJsonData.url
-                    }">${nextJsonData.url}</a></span></p>
-                    <p><b>Expectation:</b> <span id="${
-                      nextJsonData.expectationSatisfied
-                        ? "expectation-success"
-                        : "expectation-failed"
-                    }">${nextJsonData.previousExpectation}</span></p>
-                    <div class="frustration-level">
-                        <b>Frustration Level:</b>
-                        <my-dial level="${
-                          nextJsonData.frustrationLevel
-                        }"></my-dial>
-                        <span id="frustrationLevel">${
-                          nextJsonData.frustrationLevel
-                        }</span>
-                    </div>
-                    <p><b>Frustration Level Reason:</b> <span id="frustrationLevelReason">${
-                      nextJsonData.frustrationLevelReason
-                    }.</span></p>`;
-      } else {
-        // This is the last step. We don't know the result of the expectation as we didn't ask the AI, except if the goal was achieved
-        htmlContent += `<p/>
-                    <p><b>Expectation:</b> <span id=${
-                      jsonData.achieved ? "expectation-success" : "expectation"
-                    }}">${jsonData.expectation}</span></p>`;
-        if (jsonData.achieved) {
-          htmlContent += "<p><b>Goal achieved!</b> 🎉</p>";
-        }
-      }
-      htmlContent += `
-                </div>
-                <div class="image" onclick="toggleFullscreen(this)">
-                    <img src="data:image/png;base64,${
-                      screenshots[step + 1]
-                    }" alt="Screenshot ${step + 1}" />
-                </div>
-            </div>`;
-
-      // Debug only, marked with display: none in the style
-      htmlContent += `<div class="json"><pre>{${JSON.stringify(
-        jsonData,
-        null,
-        4,
-      )}}</pre></div>`;
-
-      step += 1;
-    }
-  }
-
-  htmlContent += `
-		</div>
-		<script>
-			function toggleFullscreen(element) {
-				element.classList.toggle('fullscreen');
-			}
-		</script>
-	</body>
-	</html>
-	`;
-
-  const file = fs.openSync(filename, "w");
-  if (file !== undefined) {
-    fs.writeSync(file, htmlContent);
-    fs.closeSync(file);
-  }
 }
 
 export { createReport };
