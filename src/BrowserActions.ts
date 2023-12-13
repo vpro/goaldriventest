@@ -157,6 +157,13 @@ class ClickAction extends Action {
 /**
  * The ScrollAction class is the action that is performed when the AI wants to scroll on an element or the page
  */
+
+const SCROLL_DIVIDER = {
+  little: 4,
+  medium: 2,
+  far: 1,
+};
+
 class ScrollAction extends Action {
   constructor() {
     super("scroll");
@@ -182,24 +189,18 @@ class ScrollAction extends Action {
     let distanceX: number;
     let distanceY: number;
     if ("distance" in actionPayload) {
-      const viewport = page.viewport();
-      if (viewport === null) {
-        throw new Error("Viewport not found in scroll action");
-      }
-      if (actionPayload.distance == "little") {
-        distanceX = viewport.width / 4;
-        distanceY = viewport.height / 4;
-      } else if (actionPayload.distance == "medium") {
-        distanceX = viewport.width / 2;
-        distanceY = viewport.height / 2;
-      } else if (actionPayload.distance == "far") {
-        distanceX = viewport.width;
-        distanceY = viewport.height;
-      } else {
+      const divider = SCROLL_DIVIDER[actionPayload.distance as keyof typeof SCROLL_DIVIDER];
+      if (divider === undefined) {
         throw new Error(
           "distance value little, medium or far should be given in scroll action",
         );
       }
+      const viewport = page.viewport();
+      if (viewport === null) {
+        throw new Error("Viewport not found in scroll action");
+      }
+      distanceX = Math.round(viewport.width / divider);
+      distanceY = Math.round(viewport.height / divider);
     } else {
       throw new Error("distance should be given in scroll action");
     }
@@ -208,13 +209,13 @@ class ScrollAction extends Action {
     let deltaY = 0;
     if ("direction" in actionPayload) {
       if (actionPayload.direction == "up") {
-        deltaY = -Math.round(distanceY);
+        deltaY = -distanceY;
       } else if (actionPayload.direction == "down") {
-        deltaY = Math.round(distanceY);
+        deltaY = distanceY;
       } else if (actionPayload.direction == "left") {
-        deltaX = -Math.round(distanceX);
+        deltaX = -distanceX;
       } else if (actionPayload.direction == "right") {
-        deltaX = Math.round(distanceX);
+        deltaX = distanceX;
       } else {
         throw new Error(
           "Direction value up, down, left or right should be given in scroll action",
@@ -339,8 +340,6 @@ class InputAction extends Action {
  */
 class ActionFactory {
   private _actions: Action[] = [];
-
-  constructor() {}
 
   registerAction(action: Action): void {
     if (this.getAction(action.getActionType()) !== undefined) {

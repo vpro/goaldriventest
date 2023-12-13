@@ -4,7 +4,7 @@
 //
 // This file provides the communication back and forth between the AI implementation
 
-import { OpenAI, OpenAIError } from "openai";
+import { OpenAI } from "openai";
 import fs from "fs";
 
 // Chose to keep it a simple client where you pass in multiple prompts and get back multiple responses
@@ -128,7 +128,7 @@ class OpenAIClient extends AIClient {
       throw new Error("No response from OpenAI");
     }
     if ((apiResponse.choices[0] as any).finish_details.type !== "stop") {
-      console.log(`Failure: ${apiResponse}`);
+      console.log("Failure: ", apiResponse);
       throw new Error(
         `OpenAI did not finish but gave as failure reason: ${
           (apiResponse.choices[0] as any).finish_details.type

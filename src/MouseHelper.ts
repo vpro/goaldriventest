@@ -69,7 +69,7 @@ async function installMouseHelper(page: Page): Promise<void> {
           "mousedown",
           (event) => {
             updateButtons(event.buttons);
-            box.classList.add(`button-${event.which}`);
+            box.classList.add(`button-${event.buttons}`);
           },
           true,
         );
@@ -77,7 +77,7 @@ async function installMouseHelper(page: Page): Promise<void> {
           "mouseup",
           (event) => {
             updateButtons(event.buttons);
-            box.classList.remove(`button-${event.which}`);
+            box.classList.remove(`button-${event.buttons}`);
           },
           true,
         );
