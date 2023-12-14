@@ -278,8 +278,13 @@ async function main() {
         }
         const actionResult = await action.perform(page, jsonObject.action);
         actionResults.push(actionResult);
+
+        if (step !== 0) {
+          console.log(`Expectation satisfied: ${jsonObject.expectationSatisfied} Frustration level: ${jsonObject.frustrationLevel}`);
+        }
         console.log(`Taking action: ${actionResult}`);
-        await new Promise((resolve) =>
+        console.log(`Expectation: ${jsonObject.expectation}`);
+                await new Promise((resolve) =>
           setTimeout(resolve, BROWSER_DELAY_MSECS),
         );
       } else {
