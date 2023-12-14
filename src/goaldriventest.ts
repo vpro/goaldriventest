@@ -20,6 +20,7 @@ import {
   OpenAIClient,
   AIPlaybackClient,
   AIClient,
+  createImagePrompt,
 } from "./AIClient.js";
 
 // Set up OpenAI
@@ -32,7 +33,7 @@ const MAX_STEPS = 5;
 const BROWSER_DELAY_MSECS = 4000; // Time in milliseconds
 const SCREENSHOT_MAXSIZE = { width: 1024, height: 1024 };
 
-// Temporary settings until OpenAI can give back x,y positions of elements
+// Temporary settings until OpenAI or another AI can give back x,y positions of elements
 const USE_ELEMENT_NUMBERS_FOR_CLICK = true;
 const ELEMENT_NUMBERS_SELECTOR =
   'a, button, use, select, input, [role="button"], [tabindex]:not([tabindex="-1"]';
@@ -223,28 +224,18 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, BROWSER_DELAY_MSECS));
     screenshots.push(await getScreenshot(page, USE_ELEMENT_NUMBERS_FOR_CLICK));
 
-    // Our testing loop
+    // We are ready for our main testing loop
     let step = 0;
     let achieved = false;
 
     while (step < args.maxsteps && !achieved) {
       console.log(`Step ${step + 1}`);
 
-      const prompt: Prompt = {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: `This is step ${step}. Continue with this image, what's your next action? The url is ${page.url()}`,
-          },
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:image/jpeg;base64,${screenshots[step]}`,
-            },
-          },
-        ],
-      };
+      const prompt = createImagePrompt(
+        "user",
+        `This is step ${step}. Continue with this image, what's your next action? The url is ${page.url()}`,
+        `data:image/jpeg;base64,${screenshots[step]}`,
+      );
       const response = await aiAPI.processPrompt(prompt);
 
       if (!response || response.content?.length === 0) {
@@ -326,6 +317,7 @@ async function main() {
       console.log("Goal not achieved.");
     }
   } catch (error) {
+    process.exitCode = 1;
     console.log(error);
   } finally {
     // Close browser

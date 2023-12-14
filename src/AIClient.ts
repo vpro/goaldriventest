@@ -19,6 +19,26 @@ export interface Prompt {
   content: Array<{ type: string; text?: string; image_url?: { url: string } }>;
 }
 
+export function createTextPrompt(role: string, text: string): Prompt {
+  return {
+    role,
+    content: [{ type: "text", text: text }],
+  };
+}
+export function createImagePrompt(
+  role: string,
+  text: string,
+  imageUrl: string,
+): Prompt {
+  return {
+    role,
+    content: [
+      { type: "text", text: text },
+      { type: "image_url", image_url: { url: imageUrl } },
+    ],
+  };
+}
+
 class AIClient {
   private _promptHistory: Prompt[] = [];
 
@@ -115,7 +135,6 @@ class OpenAIClient extends AIClient {
 
   async processPrompt(prompt: Prompt): Promise<Prompt> {
     const tempPromptMessages = this.getPromptHistoryTextOnly();
-    console.log(`Prompt: ${JSON.stringify(tempPromptMessages, null, 4)}`);
     tempPromptMessages.push(prompt);
 
     const apiResponse = await this._openaiAPI.chat.completions.create({
@@ -128,11 +147,10 @@ class OpenAIClient extends AIClient {
       throw new Error("No response from OpenAI");
     }
     if ((apiResponse.choices[0] as any).finish_details.type !== "stop") {
-      console.log("Failure: ", apiResponse);
       throw new Error(
         `OpenAI did not finish but gave as failure reason: ${
           (apiResponse.choices[0] as any).finish_details.type
-        }`,
+        }\nThe complete response was: ${JSON.stringify(apiResponse)}`,
       );
     }
     if (!apiResponse.choices[0].message.content) {
@@ -142,10 +160,10 @@ class OpenAIClient extends AIClient {
     // We have success, now add the prompt to the prompt history and return the response
     this.storePrompt(prompt);
     // in the future the response can also contain images or even more text...
-    const response = {
-      role: "assistant",
-      content: [{ type: "text", text: apiResponse.choices[0].message.content }],
-    };
+    const response = createTextPrompt(
+      "assistant",
+      apiResponse.choices[0].message.content,
+    );
     this.storePrompt(response);
 
     return response;

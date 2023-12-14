@@ -189,7 +189,8 @@ class ScrollAction extends Action {
     let distanceX: number;
     let distanceY: number;
     if ("distance" in actionPayload) {
-      const divider = SCROLL_DIVIDER[actionPayload.distance as keyof typeof SCROLL_DIVIDER];
+      const divider =
+        SCROLL_DIVIDER[actionPayload.distance as keyof typeof SCROLL_DIVIDER];
       if (divider === undefined) {
         throw new Error(
           "distance value little, medium or far should be given in scroll action",

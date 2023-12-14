@@ -11,22 +11,16 @@ import { DateTime } from "luxon";
 import { actionFactoryInstance } from "./BrowserActions.js";
 import { Prompt } from "./AIClient.js";
 
-// Todo: make this function check for the correct format 
+// Todo: make this function check for the correct format
 // Function that takes the text content of a prompt and returns the json inside. Can throw an error if the format is not correct
 function contentToJson(prompt: Prompt): any {
   let json;
   if (prompt?.content[0]?.text) {
-    json = JSON.parse(prompt.content[0].text.replace("```json\n", "").replace("\n```", ""));
+    json = JSON.parse(
+      prompt.content[0].text.replace("```json\n", "").replace("\n```", ""),
+    );
   }
   return json;
-}
-
-function contentToScreenshot(prompt: Prompt): string {
-  let screenshot = "";
-  if (prompt?.content[1]?.image_url) {
-    screenshot = prompt.content[1].image_url.url.replace("data:image/png;base64,", "").replace("data:image/jpeg;base64,", "");
-  }
-  return screenshot;
 }
 
 // Todo: make the arguments and the implementation of this function less ugly and with more checks
@@ -38,23 +32,22 @@ function createReport(
   args: any,
   startime: DateTime,
 ): void {
-
-  let jsonActions = promptMessages.flatMap(prompt => prompt.role === "assistant" ? [contentToJson(prompt)] : []);
-
-  console.log("jsonActions", jsonActions.length);
-  console.log("screenshots", screenshots.length);
-  console.log("actionResults", actionResults.length);
+  let jsonActions = promptMessages.flatMap((prompt) =>
+    prompt.role === "assistant" ? [contentToJson(prompt)] : [],
+  );
 
   if (jsonActions.length < 1) {
     throw new Error("Internal error: No actions found");
   }
   if (jsonActions.length < actionResults.length) {
-    throw new Error("Internal error: Number of actions and number of action results do not match");
+    throw new Error(
+      "Internal error: Number of actions and number of action results do not match",
+    );
   }
   if (screenshots.length < jsonActions.length) {
     throw new Error("Internal error: Number of screenshots unexpected");
   }
-  
+
   let htmlContent = `
   <html>
   ${getHeader()}
@@ -71,7 +64,9 @@ function createReport(
             <p>Start time: ${startime.toFormat("yyyy-LL-dd HH:mm:ss")}</p>
             <p>End time: ${DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss")}</p>
             <p>Number of steps: ${jsonActions.length}</p>
-            <p>Goal achieved: ${jsonActions[jsonActions.length - 1].achieved ? "Yes" : "No"}</p>
+            <p>Goal achieved: ${
+              jsonActions[jsonActions.length - 1].achieved ? "Yes" : "No"
+            }</p>
             <p>Browser: ${args.browser}</p>
             <p>Device: ${args.emulate}</p>
         </div>
@@ -84,7 +79,13 @@ function createReport(
 
   jsonActions.forEach((jsonAction, step) => {
     let nextJsonAction = jsonActions[step + 1];
-    htmlContent += getStepReport (step, jsonAction, nextJsonAction, actionResults[step], screenshots[step + 1]);
+    htmlContent += getStepReport(
+      step,
+      jsonAction,
+      nextJsonAction,
+      actionResults[step],
+      screenshots[step + 1],
+    );
   });
 
   htmlContent += `
@@ -100,22 +101,23 @@ function createReport(
   }
 }
 
-function getStepReport (step: number, stepJsonData: any, nextStepJsonData: any, actionResult: string, screenshot: string) : string {
-
+function getStepReport(
+  step: number,
+  stepJsonData: any,
+  nextStepJsonData: any,
+  actionResult: string,
+  screenshot: string,
+): string {
   const actionPayload = stepJsonData.action;
   let actionHtml = "";
   if (actionPayload?.actionType) {
-    const action = actionFactoryInstance.getAction(
-      actionPayload.actionType,
-    );
+    const action = actionFactoryInstance.getAction(actionPayload.actionType);
     if (!action) {
       throw new Error(`Action ${actionPayload.actionType} not recognized`);
     }
     actionHtml = `<div class="action">
                     ${action.getDescriptionHTML(actionPayload)}
-                    <p><b>Action result:</b> <span id="actionResult">${
-                      actionResult
-                    }</span></p>                
+                    <p><b>Action result:</b> <span id="actionResult">${actionResult}</span></p>                
                 </div>`;
   }
 
@@ -133,9 +135,9 @@ function getStepReport (step: number, stepJsonData: any, nextStepJsonData: any, 
   if (nextStepJsonData) {
     htmlContent += `<p/>
                 <p><b>Url:</b> 
-                  <span id="url"><a href="${
-                      nextStepJsonData.url
-                    }">${nextStepJsonData.url}</a>
+                  <span id="url"><a href="${nextStepJsonData.url}">${
+                    nextStepJsonData.url
+                  }</a>
                   </span>
                 </p>
 
@@ -144,34 +146,32 @@ function getStepReport (step: number, stepJsonData: any, nextStepJsonData: any, 
                     nextStepJsonData.expectationSatisfied
                       ? "expectation-success"
                       : "expectation-failed"
-                    }">
+                  }">
                     ${nextStepJsonData.previousExpectation}
                   </span>
                 </p>
 
                 <div class="frustration-level">
                     <b>Frustration Level:</b>
-                    <my-dial level="${
-                        nextStepJsonData.frustrationLevel
-                      }">
+                    <my-dial level="${nextStepJsonData.frustrationLevel}">
                     </my-dial>
                     <span id="frustrationLevel">${
-                        nextStepJsonData.frustrationLevel
-                      }
+                      nextStepJsonData.frustrationLevel
+                    }
                     </span>
                 </div>
 
                 <p><b>Frustration Level Reason:</b> <span id="frustrationLevelReason">${
-                    nextStepJsonData.frustrationLevelReason
-                  }.</span>
+                  nextStepJsonData.frustrationLevelReason
+                }.</span>
                 </p>`;
   } else {
     // This is the last step. We don't know the result of the expectation as we didn't ask the AI, except if the goal was achieved
     htmlContent += `
                 <p/>
                 <p><b>Expectation:</b> <span id=${
-                    stepJsonData.achieved ? "expectation-success" : "expectation"
-                  }}">${stepJsonData.expectation}</span>
+                  stepJsonData.achieved ? "expectation-success" : "expectation"
+                }}">${stepJsonData.expectation}</span>
                 </p>`;
     if (stepJsonData.achieved) {
       htmlContent += "<p><b>Goal achieved!</b> 🎉</p>";
@@ -181,9 +181,9 @@ function getStepReport (step: number, stepJsonData: any, nextStepJsonData: any, 
   htmlContent += `
             </div>
             <div class="image" onclick="toggleFullscreen(this)">
-                <img src="data:image/png;base64,${
-                  screenshot
-                }" alt="Screenshot ${step + 1}" />
+                <img src="data:image/png;base64,${screenshot}" alt="Screenshot ${
+                  step + 1
+                }" />
             </div>
         </div>`;
 
@@ -197,7 +197,7 @@ function getStepReport (step: number, stepJsonData: any, nextStepJsonData: any, 
   return htmlContent;
 }
 
-function getHeader () : string {
+function getHeader(): string {
   return `<!DOCTYPE html>
 	<html lang="en">
 	<head>
