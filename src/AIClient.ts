@@ -146,10 +146,10 @@ class OpenAIClient extends AIClient {
     if (apiResponse.choices.length === 0) {
       throw new Error("No response from OpenAI");
     }
-    if ((apiResponse.choices[0] as any).finish_details.type !== "stop") {
+    if ((apiResponse.choices[0] as any).finish_reason !== "stop") {
       throw new Error(
         `OpenAI did not finish but gave as failure reason: ${
-          (apiResponse.choices[0] as any).finish_details.type
+          (apiResponse.choices[0] as any).finish_reason
         }\nThe complete response was: ${JSON.stringify(apiResponse)}`,
       );
     }
