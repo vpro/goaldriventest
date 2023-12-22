@@ -282,7 +282,7 @@ async function main() {
         if (step !== 0) {
           console.log(`Expectation satisfied: ${jsonObject.expectationSatisfied} Frustration level: ${jsonObject.frustrationLevel}`);
         }
-        console.log(`Taking action: ${actionResult}`);
+        console.log(`Taking action: ${actionResult} (translated from command: ${JSON.stringify(jsonObject.action)})`);
         console.log(`Expectation: ${jsonObject.expectation}`);
                 await new Promise((resolve) =>
           setTimeout(resolve, BROWSER_DELAY_MSECS),

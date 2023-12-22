@@ -1,6 +1,6 @@
 {
   "name": "goaldriventest",
-  "version": "0.0.1",
+  "version": "1.0.0-alpha",
   "description": "Ask AI to test your website with a specific goal",
   "parserOptions": {
     "sourceType": "module"
